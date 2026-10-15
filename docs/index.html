@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aktarım Paneli v35 — İndir</title>
+<meta name="description" content="Aylık hasar dosyalarını birikimli ana dosyalara eşleme ile aktaran Excel aracı. Makrolu, makrosuz ve yalnızca makro paketleri.">
+<style>
+  :root {
+    --bg: #f8fafc; --card: #ffffff; --ink: #0f172a; --muted: #475569; --line: #e2e8f0;
+    --brand: #1d4ed8; --brand-ink: #ffffff; --ok: #15803d; --warn-bg: #fef3c7; --warn-ink: #78350f;
+    --code: #f1f5f9; --hero: #0f172a; --hero-ink: #f1f5f9; --shadow: 0 1px 2px rgba(15,23,42,.06), 0 4px 16px rgba(15,23,42,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1120; --card: #111827; --ink: #e5e7eb; --muted: #94a3b8; --line: #1f2937;
+      --brand: #3b82f6; --brand-ink: #ffffff; --ok: #22c55e; --warn-bg: #3b2a06; --warn-ink: #fde68a;
+      --code: #0f172a; --hero: #020617; --hero-ink: #e2e8f0; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.6 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+  a { color: var(--brand); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header { background: var(--hero); color: var(--hero-ink); padding: 40px 0 32px; }
+  header h1 { margin: 0 0 6px; font-size: clamp(26px, 4vw, 38px); letter-spacing: -.01em; }
+  header p { margin: 0; color: #94a3b8; max-width: 720px; }
+  .tag { display: inline-block; font-size: 13px; font-weight: 600; padding: 2px 10px; border-radius: 999px;
+         background: #1e293b; color: #93c5fd; margin-bottom: 12px; }
+  section { padding: 28px 0; }
+  h2 { font-size: 22px; margin: 0 0 14px; }
+  h3 { font-size: 17px; margin: 0 0 6px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px;
+          box-shadow: var(--shadow); display: flex; flex-direction: column; }
+  .card.rec { border: 2px solid var(--brand); }
+  .card .badge { align-self: flex-start; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px;
+                 background: var(--brand); color: var(--brand-ink); margin-bottom: 10px; }
+  .card .badge.alt { background: var(--line); color: var(--ink); }
+  .card p { color: var(--muted); margin: 0 0 14px; flex: 1; }
+  .ext { font-family: Consolas, ui-monospace, monospace; font-size: 13px; color: var(--muted); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
+         background: var(--brand); color: var(--brand-ink); font-weight: 600; padding: 10px 14px; border-radius: 10px; }
+  .btn:hover { filter: brightness(1.08); }
+  .btn.ghost { background: transparent; color: var(--brand); border: 1px solid var(--brand); }
+  .note { background: var(--warn-bg); color: var(--warn-ink); border-radius: 12px; padding: 14px 16px; margin: 0 0 16px; }
+  .shot { width: 100%; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+  ol, ul { padding-left: 22px; } li { margin: 4px 0; }
+  code, kbd { font-family: Consolas, ui-monospace, monospace; font-size: 14px; background: var(--code);
+              padding: 1px 6px; border-radius: 6px; }
+  pre { background: var(--code); padding: 12px 14px; border-radius: 10px; overflow-x: auto; margin: 8px 0 0; }
+  pre code { padding: 0; background: none; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.hash { font-family: Consolas, ui-monospace, monospace; font-size: 12px; word-break: break-all; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  footer { color: var(--muted); font-size: 14px; padding: 24px 0 40px; border-top: 1px solid var(--line); }
+  .copy { font-size: 12px; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line);
+          background: var(--card); color: var(--ink); cursor: pointer; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <span class="tag">Sürüm v35 · Excel VBA · açık kaynak</span>
+    <h1>Aktarım Paneli</h1>
+    <p>Aylık hasar dosyalarını (ödenen, muallak) birikimli ana dosyalara <strong>sütun eşlemesiyle</strong>
+       aktarır. Her aktarım öncesinde denetlenir, sonrasında tutar mutabakatı yapılır, kayda geçer ve geri alınabilir.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section>
+  <h2>İndir</h2>
+  <p class="note"><strong>Güvenlik uyarısı mı alıyorsunuz?</strong> Kurum ağınız veya e-postanız makrolu dosyaları
+     (<code>.xlsm</code>) engelliyorsa <strong>2</strong> ve <strong>3</strong> numaralı paketleri ayrı ayrı indirip
+     kendi bilgisayarınızda birleştirin. Aşağıdaki <a href="#ayri">adımlar</a> 5 dakika sürer.</p>
+  <div class="grid">
+    <div class="card rec">
+      <span class="badge">1 · Önerilen</span>
+      <h3>Hepsi bir arada</h3>
+      <div class="ext">AktarimPaneli_v35.xlsm · ~0.9 MB</div>
+      <p>Çalışma kitabı ve makrolar birlikte. Açın, <em>İçeriği Etkinleştir</em>'e basın, kullanmaya başlayın.</p>
+      <a class="btn" href="https://github.com/furkzel/pnL/releases/download/v35/AktarimPaneli_v35.xlsm">⬇ .xlsm indir</a>
+    </div>
+    <div class="card">
+      <span class="badge alt">2 · Makrosuz</span>
+      <h3>Yalnızca Excel dosyası</h3>
+      <div class="ext">AktarimPaneli_v35_makrosuz.xlsx · ~0.3 MB</div>
+      <p>Panel, Kılavuz ve kayıt sayfaları hazır, içinde hiç kod yok. Makro filtrelerine takılmaz.</p>
+      <a class="btn ghost" href="https://github.com/furkzel/pnL/releases/download/v35/AktarimPaneli_v35_makrosuz.xlsx">⬇ .xlsx indir</a>
+    </div>
+    <div class="card">
+      <span class="badge alt">3 · Yalnızca makrolar</span>
+      <h3>VBA modülleri</h3>
+      <div class="ext">AktarimPaneli_v35_makrolar.zip · ~0.1 MB</div>
+      <p>9 modül, 1 sınıf ve sayfa kodları, düz metin hâlinde. İçe aktarmadan önce okuyabilirsiniz. Kurulum notu (KURULUM.txt) zipin içinde.</p>
+      <a class="btn ghost" href="https://github.com/furkzel/pnL/releases/download/v35/AktarimPaneli_v35_makrolar.zip">⬇ .zip indir</a>
+    </div>
+  </div>
+  <p style="margin-top:14px">Tüm sürümler: <a href="https://github.com/furkzel/pnL/releases">GitHub Releases</a> ·
+     Kaynak kod: <a href="https://github.com/furkzel/pnL">github.com/furkzel/pnL</a></p>
+</section>
+
+<section>
+  <img class="shot" src="panel_v34.png" alt="Aktarım Paneli: üstte 1-2-3-4 iş akışı şeridi, altta eşleştirme tablosu">
+</section>
+
+<section id="ayri">
+  <h2>Makrosuz dosya + makrolar: birleştirme</h2>
+  <div class="two">
+    <div class="card">
+      <ol>
+        <li><code>AktarimPaneli_v35_makrosuz.xlsx</code> dosyasını açın. <em>Dosya › Farklı Kaydet › Excel Makro Etkin Çalışma Kitabı (*.xlsm)</em>.</li>
+        <li><kbd>Alt</kbd>+<kbd>F11</kbd> ile VBA düzenleyicisini açın. <em>File › Import File…</em> ile zipteki
+            <code>Sozluk.cls</code> ve <code>M01_…</code> – <code>M09_…</code> dosyalarını içe aktarın.</li>
+        <li>Sol panelde <strong>(Panel)</strong> satırına çift tıklayın, <code>Panel_sayfa_kodu.txt</code> içeriğini yapıştırın.</li>
+        <li><strong>ThisWorkbook</strong> (Türkçe Excel'de <em>BuÇalışmaKitabı</em>) için <code>ThisWorkbook_kodu.txt</code> içeriğini yapıştırın.</li>
+        <li><em>Debug › Compile VBAProject</em> çalıştırın; hata çıkmamalı. Kaydedin, kapatıp yeniden açın.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>“Microsoft bu dosyadaki makroları engelledi” uyarısı</h3>
+      <p>İnternetten indirilen dosyalar Windows tarafından işaretlenir (Mark of the Web) ve Office makrolarını kapatır.</p>
+      <ul>
+        <li>Dosyaya sağ tıklayın › <em>Özellikler</em> › altta <strong>Engellemeyi kaldır</strong> kutusunu işaretleyin › Tamam.</li>
+        <li>Ya da dosyayı BT'nizin tanımladığı bir <strong>Güvenilir Konum</strong>'a kopyalayın.</li>
+        <li>Kurum politikası buna da izin vermiyorsa 2 + 3 numaralı paketleri kullanın ve kodu kendiniz içe aktarın.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Dosyaları doğrulayın (SHA-256)</h2>
+  <p>İndirdiğiniz dosyanın değiştirilmediğini PowerShell ile kontrol edin; çıkan değer aşağıdakiyle aynı olmalı:</p>
+  <pre><code>Get-FileHash .\AktarimPaneli_v35.xlsm -Algorithm SHA256</code></pre>
+  <div class="card" style="margin-top:12px">
+    <table>
+      <tr><th>Dosya</th><th>SHA-256</th><th></th></tr>
+      <tr><td>AktarimPaneli_v35.xlsm</td><td class="hash">3b038abb846de5eddb091bf7dddf896265390b927dfb122a103c72a6734f8eba</td><td><button class="copy">kopyala</button></td></tr>
+      <tr><td>AktarimPaneli_v35_makrosuz.xlsx</td><td class="hash">fc47711b49371d4acff1290d14057a0a336663d16888fa2451934cbcc7e074e7</td><td><button class="copy">kopyala</button></td></tr>
+      <tr><td>AktarimPaneli_v35_makrolar.zip</td><td class="hash">a57c7646bac736b482ae312e257e08864ce2a2f7b9c4d95e6e583def96413da6</td><td><button class="copy">kopyala</button></td></tr>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Makrolar ne yapar, ne yapmaz?</h2>
+  <div class="two">
+    <div class="card">
+      <h3>Yapar</h3>
+      <ul>
+        <li>Yalnızca sizin açtığınız Excel dosyalarını okur; ana dosyaya yalnızca onay verdiğiniz aktarımı yazar.</li>
+        <li>Yazdığı her şeyi <em>Gecmis</em> ve <em>Rapor</em> sayfalarına kaydeder; <strong>Geri Al</strong> ile geri alınır.</li>
+        <li>Aktarımdan önce eksik sütun, tip uyuşmazlığı, boş zorunlu alan, bozuk tutar ve toplam satırı gibi sorunları denetler.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Yapmaz</h3>
+      <ul>
+        <li>İnternete ya da başka bir sunucuya bağlanmaz, veri göndermez.</li>
+        <li>Dosya silmez, Windows ayarlarını değiştirmez, ActiveX veya dış kütüphane kullanmaz.</li>
+        <li>Kodun tamamı açık metindir: <a href="https://github.com/furkzel/pnL/tree/main/src">src/</a>.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">Aktarım Paneli v35 · Kullanım kılavuzu çalışma kitabının içindeki <strong>Kılavuz</strong> sayfasındadır ·
+    Geliştirici notları: <a href="https://github.com/furkzel/pnL#readme">README</a></div>
+</footer>
+
+<script>
+  document.querySelectorAll("button.copy").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var h = b.closest("tr").querySelector(".hash").textContent.trim();
+      try { navigator.clipboard.writeText(h); b.textContent = "kopyalandı"; } catch (e) { b.textContent = "seçip kopyalayın"; }
+      setTimeout(function () { b.textContent = "kopyala"; }, 1600);
+    });
+  });
+</script>
+</body>
+</html>

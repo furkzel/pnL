@@ -1,0 +1,10 @@
+# VBA sources: always ASCII text. The VBA editor needs CRLF on import;
+# tools/build.py converts on the fly, so the repository can keep LF.
+*.bas text eol=lf
+*.cls text eol=lf
+*.py  text eol=lf
+*.md  text eol=lf
+
+*.xlsm binary
+*.xlsx binary
+*.png  binary

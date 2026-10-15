@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+~$*.xls*
+# build output is reproducible with tools/build.py / tools/release.py;
+# release packages are published as GitHub Release assets
+dist/
+# local, private material - never published
+_/
+session-export-*/
