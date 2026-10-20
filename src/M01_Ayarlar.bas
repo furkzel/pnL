@@ -3,7 +3,7 @@ Option Explicit
 Option Private Module
 
 ' ============================================================
-' AKTARIM PANELI  v34  -  M01_Ayarlar
+' AKTARIM PANELI  v1.0  -  M01_Ayarlar
 '
 ' Tum SABITLER, ENUM'lar ve GLOBAL durum burada durur. Baska hicbir
 ' modulde "sihirli sayi" (Cells(i, 8), Cells(2, 341) ...) yazilmaz;
@@ -22,7 +22,8 @@ Option Private Module
 '   M06_Aktarim     aktarim motoru: on kontrol (ENGEL/DIKKAT), filtre,
 '                   bicim korumasi, yazma, tutar mutabakati
 '   M07_Kayit       Geri Al, Gecmis, Rapor, yedek, parmak izi
-'   M08_Kurulum     SifirdanKur, PaneliYenidenKur, v33 gecisi, Tani
+'   M08_Kurulum     SifirdanKur, PaneliYenidenKur, v33/v34 gecisi, Tani
+'   M10_Denetim     Denetim sayfasi (yonetici ozeti), kontrol noktasi adlari
 '   M09_Kilavuz     Kilavuz ve Gelistirici sayfalari
 '   Panel (sayfa)   Worksheet_Change / SelectionChange olaylari
 '   ThisWorkbook    Workbook_Open: Excel durumunu onarir
@@ -44,11 +45,11 @@ Option Private Module
 '   - IIf iki dali da hesaplar; Nothing olabilecek nesnede kullanma.
 ' ============================================================
 
-Public Const SURUM As String = "v35"
+Public Const SURUM As String = "v1.0"
 
 ' Panel duzeni isareti (calisma kitabi adi). v33 panelinde yoktur.
 Public Const DUZEN_ADI As String = "AP_DUZEN"
-Public Const DUZEN_DEGERI As String = "v34"
+Public Const DUZEN_DEGERI As String = "v1.0"
 
 ' ------------------------------------------------------------
 '  SAYFA ADLARI  (Kilavuz adi Turkce harf icerdigi icin fonksiyon)
@@ -60,21 +61,24 @@ Public Const SAYFA_SET As String = "Setler"
 Public Const SAYFA_GECMIS As String = "Gecmis"
 Public Const SAYFA_GELISTIRICI As String = "Gelistirici"
 Public Const SAYFA_YEDEK As String = "Yedek"
+Public Const SAYFA_DENETIM As String = "Denetim"
 Public Const SAYFA_LISTE_ONEK As String = "Listeler"
 
 ' ------------------------------------------------------------
-'  PANEL YERLESIMI  (v34: blok basina 6 sutun)
+'  PANEL YERLESIMI  (v1.0: blok basina 6 sutun)
 '
 '  Satir  1-5 : buton seridi (dondurulmus)
 '  Satir  7   : blok basligi "PANEL k - dosya / sayfa"
-'  Satir  8-21: ayarlar (etiket c, deger c+2)
+'  Satir  8-21: ayarlar (etiket c..c+1 birlesik, deger c+2)
 '  Satir  8-24: SABIT DEGERLER kutusu (sutun c+3, deger c+4)
+'  Satir  8-17: KONTROL NOKTALARI karnesi K1..K8 (c+5)
 '  Satir 26   : DURUM
 '  Satir 28   : tablo basligi, 29-530: eslestirme tablosu
 '
 '  Tablo sutunlari (c = blogun ilk sutunu):
 '   c+0 KAYNAK SUTUN | c+1 VERI TIPI | c+2 HEDEF SUTUN |
-'   c+3 HEDEF HARITASI | c+4 FILTRE | c+5 ISLEM (SEC / FORMUL)
+'   c+3 FILTRE | c+4 ISLEM (SEC / FORMUL) | c+5 HEDEF HARITASI (salt okunur)
+'   v1.0: kullanicinin yazdigi sutunlar yan yana, salt okunur harita en sagda.
 ' ------------------------------------------------------------
 Public Const MAX_BLOK As Long = 10
 Public Const BLOK_GENISLIK As Long = 6
@@ -82,14 +86,15 @@ Public Const BLOK_GENISLIK As Long = 6
 Public Const OFS_KAYNAK As Long = 0
 Public Const OFS_TIP As Long = 1
 Public Const OFS_HEDEF As Long = 2
-Public Const OFS_HARITA As Long = 3
-Public Const OFS_FILTRE As Long = 4
-Public Const OFS_ISLEM As Long = 5
+Public Const OFS_FILTRE As Long = 3
+Public Const OFS_ISLEM As Long = 4
+Public Const OFS_HARITA As Long = 5
 
 Public Const OFS_ETIKET As Long = 0         ' ayar etiketi
 Public Const OFS_AYAR As Long = 2           ' ayar degeri (menulu hucre)
 Public Const OFS_SABIT_SUTUN As Long = 3    ' SABIT DEGERLER: ana dosya sutunu
 Public Const OFS_SABIT_DEGER As Long = 4    ' SABIT DEGERLER: deger
+Public Const OFS_KARNE As Long = 5          ' KONTROL NOKTALARI karnesi
 
 Public Const SERIT_SON_SATIR As Long = 5     ' 1-5 serit; 6'dan itibaren kayar
 Public Const SATIR_BLOK_BASLIK As Long = 7
@@ -115,6 +120,19 @@ Public Const SABIT_SON As Long = 23
 Public Const SABIT_NOT As Long = 24
 Public Const SABIT_EN_FAZLA As Long = 15
 
+' KONTROL NOKTALARI karnesi (c+5): 8 baslik, 9..16 K1..K8, 17 son kontrol notu
+Public Const KARNE_BASLIK As Long = 8
+Public Const KARNE_ILK As Long = 9
+Public Const KARNE_NOT As Long = 17
+Public Const K_SAYI As Long = 8
+
+' Kontrol noktasi durumlari (artan onem sirasiyla)
+Public Const KD_BEKLIYOR As String = "-"       ' henuz calismadi
+Public Const KD_YOK As String = "YOK"          ' bu aktarimda uygulanmaz
+Public Const KD_OK As String = "OK"
+Public Const KD_DIKKAT As String = "DIKKAT"
+Public Const KD_ENGEL As String = "ENGEL"
+
 Public Const SATIR_DURUM As Long = 26
 Public Const BASLIK_SATIR As Long = 28
 Public Const ILK_SATIR As Long = 29
@@ -138,6 +156,9 @@ Public Const V33_SABIT_DEGER_OFS As Long = 3
 Public Const V33_SATIR_HASAR As Long = 22
 Public Const V33_SATIR_IHBAR As Long = 23
 Public Const V33_SATIR_TUTAR As Long = 24
+' v34 (6 sutun, harita ortada)
+Public Const V34_OFS_FILTRE As Long = 4
+Public Const V34_OFS_ISLEM As Long = 5
 Public Const V31_SABIT_SUTUN As Long = 19     ' v31 tek sabit deger satirlari
 Public Const V31_SABIT_DEGER As Long = 20
 
@@ -214,7 +235,8 @@ Public Const R_EXCEL_KULLANICI As Long = 23
 Public Const R_YAZILAN_TOPLAM As Long = 24   ' v34
 Public Const R_HEDEF_ONCEKI As Long = 25     ' v34
 Public Const R_HEDEF_YENI As Long = 26       ' v34
-Public Const R_SON As Long = 26
+Public Const R_KONTROL As Long = 27          ' v1.0: kontrol noktasi (K1..K8)
+Public Const R_SON As Long = 27
 
 ' ------------------------------------------------------------
 '  GECMIS SAYFASI SUTUNLARI (Geri Al defteri)

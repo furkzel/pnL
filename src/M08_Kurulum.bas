@@ -2,7 +2,7 @@ Attribute VB_Name = "M08_Kurulum"
 Option Explicit
 
 ' ============================================================
-' AKTARIM PANELI  v34  -  M08_Kurulum
+' AKTARIM PANELI  v1.0  -  M08_Kurulum
 '
 '   SifirdanKur      : TEK TIKLA KURULUM / YUKSELTME. Kayit sayfalarini
 '                      hazirlar, v33'ten kalan analiz sayfalarini (Ozet,
@@ -53,7 +53,7 @@ Public Sub SifirdanKur()
     If FazlaPanelVar() <> "" Then
         MsgBox "KURULUM DURDU - hicbir sey degistirilmedi" & vbNewLine & vbNewLine & _
                FazlaPanelVar() & vbNewLine & vbNewLine & _
-               "v34 en fazla " & MAX_BLOK & " panel destekler. Fazla panelleri once" & vbNewLine & _
+               "v1.0 en fazla " & MAX_BLOK & " panel destekler. Fazla panelleri once" & vbNewLine & _
                "'Set Kaydet' ile saklayip v33'te 'Panel Kaldir' ile kaldir.", vbCritical, "Sifirdan Kur"
         Exit Sub
     End If
@@ -61,7 +61,7 @@ Public Sub SifirdanKur()
     If artik <> "" Then
         MsgBox "KURULUM DURDU" & vbNewLine & vbNewLine & _
                "VBA projesinde eski surumun modulleri duruyor: " & artik & vbNewLine & vbNewLine & _
-               "Bunlar v34 modulleriyle ayni adli prosedurler icerir ve" & vbNewLine & _
+               "Bunlar v1.0 modulleriyle ayni adli prosedurler icerir ve" & vbNewLine & _
                "'Ambiguous name' hatasina yol acar. VBA editorunde (Alt+F11)" & vbNewLine & _
                "bu modullere sag tikla > Remove (Export etmeden) ve tekrar dene." & vbNewLine & _
                "(tools/build.py bunu otomatik yapar.)", vbCritical, "Sifirdan Kur"
@@ -112,6 +112,7 @@ Public Sub SifirdanKur()
     gelistiriciTamam = SayfaVarMi(SAYFA_GELISTIRICI)
     On Error GoTo Hata
 
+    DenetimSessiz
     SekmeleriDuzenle
     EkranAc
 
@@ -158,7 +159,7 @@ Public Sub PaneliYenidenKur()
 
     If MsgBox("Panel ekrani yeniden cizilecek." & vbNewLine & vbNewLine & _
               "Butun panellerin ayarlari, SABIT DEGERLER ve eslestirmeleri" & vbNewLine & _
-              "korunur. Eski (v33) duzendeki panel v34 duzenine tasinir." & vbNewLine & vbNewLine & _
+              "korunur. Eski (v33) duzendeki panel v1.0 duzenine tasinir." & vbNewLine & vbNewLine & _
               "Devam edilsin mi?", vbYesNo + vbQuestion, "Paneli Yeniden Kur") <> vbYes Then Exit Sub
 
     EkranKilitle
@@ -242,7 +243,7 @@ Private Function PaneliYenidenKurIc() As String
     Dim pnl As Worksheet
     Dim bloklar() As BlokIcerik
     Dim adet As Long, k As Long, gorunur As Long, tasinan As Long
-    Dim v33 As Boolean
+    Dim v33 As Boolean, v34 As Boolean
 
     If Not SayfaVarMi(SAYFA_PANEL) Then
         Set pnl = PanelHazirla()
@@ -255,12 +256,13 @@ Private Function PaneliYenidenKurIc() As String
     End If
 
     Set pnl = PanelHazirla()
-    v33 = Not PanelDuzeniGuncel() And V33DuzeniMi(pnl)
+    v34 = (KayitliDuzen() = "v34")
+    v33 = Not PanelDuzeniGuncel() And Not v34 And V33DuzeniMi(pnl)
 
     ' --- 1. OKU (hicbir sey silinmeden once) ---
     If v33 Then
         adet = V33BlokSayisi(pnl)
-    ElseIf PanelDuzeniGuncel() Then
+    ElseIf PanelDuzeniGuncel() Or v34 Then
         adet = BlokSayisi(pnl)
     Else
         adet = 0
@@ -269,11 +271,11 @@ Private Function PaneliYenidenKurIc() As String
     If adet > 0 Then
         ReDim bloklar(1 To adet)
         For k = 1 To adet
-            bloklar(k) = BlokOku(pnl, k, v33)
+            bloklar(k) = BlokOku(pnl, k, v33, v34)
             If bloklar(k).Var And Not bloklar(k).Gizli Then
                 gorunur = gorunur + 1
                 If k > MAX_BLOK Then
-                    Err.Raise vbObjectError + 600, , "PANEL " & k & " dolu; v34 en fazla " & MAX_BLOK & _
+                    Err.Raise vbObjectError + 600, , "PANEL " & k & " dolu; v1.0 en fazla " & MAX_BLOK & _
                               " panel destekler. Once fazla panelleri Set olarak kaydedip kaldir."
                 End If
             End If
@@ -308,6 +310,8 @@ Private Function PaneliYenidenKurIc() As String
 
     If v33 Then
         PaneliYenidenKurIc = "v33 duzeninden tasindi (" & tasinan & " panel; ayarlar, sabit degerler ve eslestirmeler korundu)"
+    ElseIf v34 Then
+        PaneliYenidenKurIc = "v34 duzeninden tasindi (" & tasinan & " panel; FILTRE/ISLEM sola, HEDEF HARITASI saga alindi; icerik korundu)"
     ElseIf adet > 0 Then
         PaneliYenidenKurIc = "yeniden cizildi (" & tasinan & " panel, icerik korundu)"
     Else
@@ -322,6 +326,17 @@ Private Function PanelHazirla() As Worksheet
     Set pnl = SayfaOlustur(SAYFA_PANEL)
     pnl.Visible = xlSheetVisible
     Set PanelHazirla = pnl
+End Function
+
+
+' Calisma kitabindaki panel duzeni adi: "v1.0" (eski adi "v35"), "v34" ya da "" (v33 ve oncesi)
+Private Function KayitliDuzen() As String
+    Dim s As String
+    On Error Resume Next
+    s = ThisWorkbook.Names(DUZEN_ADI).RefersTo
+    On Error GoTo 0
+    s = Replace(Replace(s, "=", ""), Chr$(34), "")
+    KayitliDuzen = Trim$(s)
 End Function
 
 
@@ -411,12 +426,13 @@ End Function
 
 
 ' Bir blogun butun icerigini okur (v33 ya da v34 yerlesimi)
-Private Function BlokOku(ByVal pnl As Worksheet, ByVal k As Long, ByVal v33 As Boolean) As BlokIcerik
+Private Function BlokOku(ByVal pnl As Worksheet, ByVal k As Long, ByVal v33 As Boolean, _
+                         ByVal v34 As Boolean) As BlokIcerik
 
     Dim b As BlokIcerik
     Dim c As Long, i As Long, son As Long, n As Long
     Dim satirlar As Variant
-    Dim oKaynak As Long, oHedef As Long, oFiltre As Long, oDeger As Long
+    Dim oKaynak As Long, oHedef As Long, oFiltre As Long, oDeger As Long, oIslem As Long
     Dim oSabitS As Long, oSabitD As Long
     Dim sec As Boolean, formul As Boolean
     Dim r As Long, sabitler As String, eskiSutun As String, eskiDeger As String
@@ -436,7 +452,8 @@ Private Function BlokOku(ByVal pnl As Worksheet, ByVal k As Long, ByVal v33 As B
         c = BlokSutun(k)
         oKaynak = OFS_KAYNAK
         oHedef = OFS_HEDEF
-        oFiltre = OFS_FILTRE
+        oFiltre = IIf(v34, V34_OFS_FILTRE, OFS_FILTRE)
+        oIslem = IIf(v34, V34_OFS_ISLEM, OFS_ISLEM)
         oDeger = OFS_AYAR
         oSabitS = OFS_SABIT_SUTUN
         oSabitD = OFS_SABIT_DEGER
@@ -502,7 +519,7 @@ Private Function BlokOku(ByVal pnl As Worksheet, ByVal k As Long, ByVal v33 As B
             formul = (BH(Trim$(GuvenliMetin(pnl.Cells(r, c + V33_OFS_FORMUL).Value))) = "EVET")
             b.Islem(i) = IslemMetni(sec, formul)
         Else
-            b.Islem(i) = GuvenliMetin(pnl.Cells(r, c + OFS_ISLEM).Value)
+            b.Islem(i) = GuvenliMetin(pnl.Cells(r, c + oIslem).Value)
         End If
         If OneriMi(pnl.Cells(r, c + oHedef)) Then b.Oneri(i) = OneriMetni(pnl.Cells(r, c + oHedef))
     Next i
@@ -693,8 +710,8 @@ Public Sub SekmeleriDuzenle()
     On Error Resume Next
     Set eskiSayfa = ActiveSheet
 
-    sira = Array(KilavuzAdi(), SAYFA_PANEL, SAYFA_RAPOR, SAYFA_PROFIL, SAYFA_SET, SAYFA_GECMIS, SAYFA_GELISTIRICI)
-    renk = Array(RGB(29, 78, 216), RGB(22, 163, 74), RGB(234, 88, 12), RGB(124, 58, 237), _
+    sira = Array(KilavuzAdi(), SAYFA_PANEL, SAYFA_DENETIM, SAYFA_RAPOR, SAYFA_PROFIL, SAYFA_SET, SAYFA_GECMIS, SAYFA_GELISTIRICI)
+    renk = Array(RGB(29, 78, 216), RGB(22, 163, 74), RGB(14, 116, 144), RGB(234, 88, 12), RGB(124, 58, 237), _
                  RGB(124, 58, 237), RGB(100, 116, 139), RGB(100, 116, 139))
 
     konum = 0

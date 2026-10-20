@@ -4,7 +4,7 @@ export.py - copy the VBA code of a workbook back into src/ (round trip).
 Use this after a quick fix was made directly in the Excel VBA editor, then
 review the change with `git diff src/` before committing.
 
-  python tools/export.py dist/AktarimPaneli_v34.xlsm
+  python tools/export.py dist/AktarimPaneli_v1.0.xlsm
 
 Only project components are exported (M0*_*.bas, Sozluk.cls, the Panel sheet
 module -> src/Panel.cls, ThisWorkbook -> src/ThisWorkbook.cls). The ASCII check

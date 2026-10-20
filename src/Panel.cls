@@ -1,5 +1,5 @@
 ' ============================================================
-' AKTARIM PANELI  v34  -  "Panel" SAYFASININ KOD SAYFASI
+' AKTARIM PANELI  v1.0  -  "Panel" SAYFASININ KOD SAYFASI
 '
 ' Bu dosya bir sinif modulu OLARAK ICE AKTARILMAZ. tools\build.py
 ' icerigi Panel sayfasinin kendi kod sayfasina yazar. Elle kurulumda:

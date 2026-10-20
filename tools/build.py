@@ -9,11 +9,11 @@ Requirements: Windows, Excel, pywin32, and in Excel
 Examples
 --------
   # Fresh workbook, built from scratch and set up (Panel, Rapor, Kilavuz ...)
-  python tools/build.py --new dist/AktarimPaneli_v34.xlsm
+  python tools/build.py --new dist/AktarimPaneli_v1.0.xlsm
 
   # Upgrade an existing v33 workbook. The input is NEVER modified; a copy is
   # written to --out and SifirdanKur migrates the panel inside the copy.
-  python tools/build.py --upgrade "_/Kitap1.xlsm" --out dist/Kitap1_v34.xlsm
+  python tools/build.py --upgrade "_/Kitap1.xlsm" --out dist/Kitap1_v1.0.xlsm
 
   # Only check that every source file is pure ASCII
   python tools/build.py --check
@@ -23,6 +23,7 @@ Exit code 0 = success, 1 = failure (compile error, missing setup, ...).
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import sys
 import time
@@ -37,6 +38,17 @@ except Exception:
     pass
 
 
+def clean_log_sheets(s, wb) -> None:
+    """A distribution workbook ships with header-only Rapor and Gecmis: the
+    KURULUM row written by SifirdanKur carries the builder's user names."""
+    for name in ("Rapor", "Gecmis"):
+        ws = wb.Worksheets(name)
+        last = ws.UsedRange.Row + ws.UsedRange.Rows.Count - 1
+        if last >= 2:
+            ws.Range(ws.Cells(2, 1), ws.Cells(last, ws.UsedRange.Columns.Count)).EntireRow.Delete()
+    s.run(wb, "DenetimSessiz")
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     g = ap.add_mutually_exclusive_group(required=True)
@@ -46,9 +58,16 @@ def main(argv=None) -> int:
     ap.add_argument("--out", metavar="OUT.xlsm", help="output path for --upgrade")
     ap.add_argument("--no-setup", action="store_true", help="do not run SifirdanKur after injecting")
     ap.add_argument("--visible", action="store_true", help="show the Excel window while building")
+    ap.add_argument("--src", metavar="DIR", default=None,
+                    help="VBA source folder (default: src/). Used by the tests to build an older layout.")
     args = ap.parse_args(argv)
 
-    problems = xlauto.check_ascii()
+    src_dir = Path(args.src).resolve() if args.src else xlauto.SRC
+    if args.new:
+        # Excel inherits this environment: the Denetim stamp shows a neutral name
+        os.environ["USERNAME"] = "AKTUERYA"
+        os.environ["USER"] = "AKTUERYA"
+    problems = xlauto.check_ascii(src_dir)
     if problems:
         print("ASCII CHECK FAILED:")
         print("\n".join(problems))
@@ -81,7 +100,7 @@ def main(argv=None) -> int:
             while wb.Worksheets.Count > 1:
                 wb.Worksheets(wb.Worksheets.Count).Delete()
 
-        for line in xlauto.inject_sources(wb):
+        for line in xlauto.inject_sources(wb, src_dir):
             print("  " + line)
 
         ok, msgs = xlauto.compile_project(s, wb)
@@ -107,11 +126,16 @@ def main(argv=None) -> int:
                 print("SETUP FAILED: no Panel sheet")
                 return 1
 
+        if not args.upgrade and not args.no_setup:
+            clean_log_sheets(s, wb)
         if args.upgrade:
             wb.Save()
         else:
+            xlauto.scrub_personal_info(wb)
             wb.SaveAs(str(out), FileFormat=xlauto.XL_OPENXML_MACRO)
         print("saved:", out)
+    if not args.upgrade:
+        xlauto.strip_package_identity(out)
     return 0
 
 

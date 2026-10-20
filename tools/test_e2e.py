@@ -1,7 +1,7 @@
 """
 test_e2e.py - end-to-end test of the built workbook, driven through Excel.
 
-  python tools/test_e2e.py [--panel dist/AktarimPaneli_v34.xlsm] [--v33 _/Kitap1.xlsm]
+  python tools/test_e2e.py [--panel dist/AktarimPaneli_v1.0.xlsm] [--v33 _/Kitap1.xlsm]
 
 Creates a monthly source file and a master file in a temp folder, configures
 PANEL 1 through COM exactly like a user would (cell edits fire the sheet
@@ -132,8 +132,10 @@ def make_master(xl, folder: Path):
 C = 1          # block 1 first column
 AYAR = C + 2   # setting value column
 HEDEF = C + 2
-FILTRE = C + 4
-ISLEM = C + 5
+FILTRE = C + 3
+ISLEM = C + 4
+HARITA = C + 5
+KARNE = C + 5
 ILK = 29
 
 
@@ -186,8 +188,20 @@ def run_main(panel_path: Path, work: Path):
         check("yenile summary shown", "YENILE TAMAMLANDI" in dialogs_since(s, k0), dialogs_since(s, k0))
         check("source columns listed", pnl.Cells(ILK, C).Value == "A - Pol No", str(pnl.Cells(ILK, C).Value))
         check("data type column", "TARIH" in str(pnl.Cells(ILK + 1, C + 1).Value), str(pnl.Cells(ILK + 1, C + 1).Value))
-        check("target map lists master columns", "POLICE NO" in str(pnl.Cells(ILK, C + 3).Value), str(pnl.Cells(ILK, C + 3).Value))
-        check("green column flagged", "YESIL, BOSTA" in str(pnl.Cells(ILK + 8, C + 3).Value), str(pnl.Cells(ILK + 8, C + 3).Value))
+        check("target map lists master columns", "POLICE NO" in str(pnl.Cells(ILK, HARITA).Value), str(pnl.Cells(ILK, HARITA).Value))
+        check("green column flagged", "YESIL, BOSTA" in str(pnl.Cells(ILK + 8, HARITA).Value), str(pnl.Cells(ILK + 8, HARITA).Value))
+        # v1.0 layout: editable columns together, read-only map at the right edge
+        hdr = [str(pnl.Cells(28, C + i).Value) for i in range(6)]
+        check("v1.0 column order", hdr[3].startswith("F") and hdr[4].endswith("LEM") and "HAR" in hdr[5], str(hdr))
+        check("setting labels merged (c..c+1)", pnl.Cells(10, C).MergeCells and pnl.Cells(10, C).MergeArea.Columns.Count == 2)
+        # live checkpoint card after Yenile: K1/K4/K5 known, data checks pending
+        k1, k4, k6 = str(pnl.Cells(9, KARNE).Value), str(pnl.Cells(12, KARNE).Value), str(pnl.Cells(14, KARNE).Value)
+        check("scorecard header", "KONTROL NOKTALARI" in str(pnl.Cells(8, KARNE).Value).replace("İ", "I"))
+        check("scorecard K1 ENGEL before any mapping", "K1" in k1 and "✕" in k1, k1)
+        check("scorecard K4 live (green unmapped)", "K4" in k4 and k4.startswith("!"), k4)
+        check("scorecard K6 pending", "○" in k6, k6)
+        rib = wbP.Worksheets("Panel").Shapes("AP_HAZIRLIK").TextFrame2.TextRange.Text
+        check("readiness pill exists", "dahil" in rib or "panel" in rib, rib)
         check("filter dropdown exists (Sirket)", _has_validation(pnl.Cells(ILK + 4, FILTRE)))
         check("auto-detect Tutar", pnl.Cells(19, AYAR).Value == "D - TUTAR", repr(pnl.Cells(19, AYAR).Value))
         check("auto-detect Hasar", pnl.Cells(20, AYAR).Value == "B - HASAR TARIHI", repr(pnl.Cells(20, AYAR).Value))
@@ -223,6 +237,7 @@ def run_main(panel_path: Path, work: Path):
         s.run(wbP, "OneriOnayla")
         check("smart approve -> all", "TUM ONERILERI ONAYLA" in dialogs_since(s, k0), dialogs_since(s, k0))
         check("suggestion approved", pnl.Cells(r_tutar, HEDEF).Comment is None)
+        check("scorecard K1 OK once mapped", "✓" in str(pnl.Cells(9, KARNE).Value), str(pnl.Cells(9, KARNE).Value))
 
         # double-click shortcuts
         pnl.Cells(r_tutar, HEDEF).Value = None
@@ -253,6 +268,16 @@ def run_main(panel_path: Path, work: Path):
         s.run(wbP, "Yenile")
         check("profile re-applied (Pol No)", pnl.Cells(r_pol, HEDEF).Value == "A - POLICE NO", str(pnl.Cells(r_pol, HEDEF).Value))
         check("profile re-applied (FORMUL flag)", "FORM" in str(pnl.Cells(r_hesap, ISLEM).Value), str(pnl.Cells(r_hesap, ISLEM).Value))
+        # double-click: "Bu paneli aktar" toggles, map column -> fixed value
+        before_dahil = str(pnl.Cells(8, AYAR).Value)
+        s.run(wbP, "PanelCiftTik", pnl.Cells(8, AYAR), False)
+        check("double-click DAHIL toggles", str(pnl.Cells(8, AYAR).Value) != before_dahil, str(pnl.Cells(8, AYAR).Value))
+        s.run(wbP, "PanelCiftTik", pnl.Cells(8, AYAR), False)
+        check("double-click DAHIL toggles back", str(pnl.Cells(8, AYAR).Value) == before_dahil)
+        s.run(wbP, "PanelCiftTik", pnl.Cells(ILK + 9, HARITA), False)          # J - DOSYA_TURU (green, empty)
+        check("double-click map -> fixed value row", pnl.Cells(10, C + 3).Value == "J - DOSYA_TURU", repr(pnl.Cells(10, C + 3).Value))
+        check("map now shows [+] for DOSYA_TURU", str(pnl.Cells(ILK + 9, HARITA).Value).startswith("[+]"), str(pnl.Cells(ILK + 9, HARITA).Value))
+        pnl.Cells(10, C + 4).Value = "ODENEN"
         durum = str(pnl.Cells(26, C).Value)
         check("DURUM says HAZIR", "HAZIR" in durum and "AKTARIMA DAHIL" in durum, durum)
         check("leading-zero codes typed METIN", str(pnl.Cells(r_pol, C + 1).Value).startswith("METIN"),
@@ -270,7 +295,16 @@ def run_main(panel_path: Path, work: Path):
         check("dry run: 200 rows", "Aktarilacak : 200 satir" in msg, msg)
         check("dry run: date check", "KAYNAK TARIH KONTROLU" in msg and "ONCE: 2 satir" in msg, msg)
         check("dry run: format guard", "BICIM KORUMASI" in msg, msg)
-        check("dry run: green column", "DOSYA_TURU" in msg, msg)
+        check("dry run: green blank count (C20)", "IHBAR TARIHI sutununda 1 satirda" in msg, msg[:300])
+        check("dialog shows checkpoint summary", "KONTROL NOKTALARI:" in msg and "K1 OK" in msg, msg[:900])
+        check("items tagged [K..]", "[K3]" in msg and "[K8]" in msg and "[K6]" in msg, msg[:900])
+        karne = [str(pnl.Cells(9 + i, KARNE).Value) for i in range(8)]
+        check("scorecard K3 DIKKAT after dry run", karne[2].startswith("!"), karne[2])
+        check("scorecard K8 DIKKAT after dry run", karne[7].startswith("!"), karne[7])
+        check("scorecard K2 OK after dry run", "✓" in karne[1], karne[1])
+        rlast = last_row(rpr)
+        tags = [str(rpr.Cells(r, 27).Value or "") for r in range(r0 + 1, rlast + 1)]
+        check("Rapor KONTROL NOKTASI column", any(t.startswith("K8 DIKKAT") for t in tags) and any(t.startswith("K3") for t in tags), str(tags))
         check("dry run wrote nothing", last_row(wsM) == MASTER_ROWS + 1, str(last_row(wsM)))
         check("dry run: tail preview shown", "Icerik:" in msg and "TOPLAM" in msg, msg[:600])
         check("dry run: green blank cells", "ZORUNLU (YESIL) SUTUNDA BOS HUCRE" in msg and "IHBAR TARIHI sutununda 1 satirda" in msg, msg)
@@ -335,11 +369,22 @@ def run_main(panel_path: Path, work: Path):
         rl = last_row(rpr)
         aktar_row = max(r for r in range(2, rl + 1) if rpr.Cells(r, 3).Value == "AKTARIM")
         check("Rapor: TUTUYOR", str(rpr.Cells(aktar_row, 20).Value).startswith("TUTUYOR"), str(rpr.Cells(aktar_row, 20).Value))
+        check("Rapor: reconciliation cell green", rpr.Cells(aktar_row, 20).Interior.Color == 0xE7FCDC, hex(int(rpr.Cells(aktar_row, 20).Interior.Color)))
+        dikkat_rows = [r for r in range(2, aktar_row) if rpr.Cells(r, 3).Value == "DIKKAT" and str(rpr.Cells(r, 27).Value or "").startswith("K")]
+        check("OnayAl wrote every DIKKAT item (tagged)", len(dikkat_rows) >= 4, str(len(dikkat_rows)))
+        check("scorecard K7 after transfer", "✓" in str(pnl.Cells(15, KARNE).Value) and "FARK 0,00" in str(pnl.Cells(17, KARNE).Value),
+              str(pnl.Cells(15, KARNE).Value) + " | " + str(pnl.Cells(17, KARNE).Value))
+        den = wbP.Worksheets("Denetim")
+        check("Denetim sheet refreshed", str(den.Cells(6, 2).Value).strip("'") == "1" and str(den.Cells(6, 4).Value).strip("'") == "1",
+              f"{den.Cells(6, 2).Value!r} {den.Cells(6, 4).Value!r}")
+        check("Denetim: K8 statistics", (den.Cells(18, 4).Value or 0) >= 1, repr(den.Cells(18, 4).Value))
+        check("Denetim: last transfer row", den.Cells(22, 10).Value == "TUTUYOR" and den.Cells(22, 11).Value == "ETKIN",
+              f"{den.Cells(22, 10).Value!r} {den.Cells(22, 11).Value!r}")
         check("Rapor: onceki/yeni toplam", abs(rpr.Cells(aktar_row, 25).Value - before_total) < 0.005
               and abs(rpr.Cells(aktar_row, 26).Value - (before_total + src_total)) < 0.005, "")
         gec = wbP.Worksheets("Gecmis")
         gl = last_row(gec)
-        check("Gecmis rows (8 mapped + 1 fixed)", gl - 1 == 9, str(gl))
+        check("Gecmis rows (8 mapped + 2 fixed)", gl - 1 == 10, str(gl))
         check("Gecmis fingerprint", str(gec.Cells(gl, 15).Value).startswith("V;n="), str(gec.Cells(gl, 15).Value))
         k0 = len(s.watcher.events)
         s.run(wbP, "OnKontrol")
@@ -554,9 +599,74 @@ def run_migration(v33_path: Path, work: Path):
         wb.Close(False)
 
 
+V34_COMMIT = "7924d1f"   # last commit that still has the v34 panel layout
+
+
+def run_migration_v34(work: Path):
+    """Build a REAL v34-layout workbook from the pinned v34-layout commit (git archive),
+    fill it like a user, upgrade it with the current code, check every value
+    landed in its new v1.0 column."""
+    import subprocess
+    import tarfile
+    print("\n[9] v34 -> v1.0 gecisi (git HEAD kaynagindan gercek v34 paneli)")
+    old_src = work / "src_v34"
+    old_src.mkdir()
+    tar = work / "v34.tar"
+    with open(tar, "wb") as f:
+        subprocess.run(["git", "-C", str(ROOT), "archive", V34_COMMIT, "src"], stdout=f, check=True)
+    with tarfile.open(tar) as t:
+        t.extractall(old_src)
+    old_layout = (old_src / "src" / "M01_Ayarlar.bas").read_text(encoding="ascii")
+    if "OFS_HARITA As Long = 3" not in old_layout:
+        check("HEAD commit has the v34 layout (skip)", True)
+        return
+    old = work / "v34_panel.xlsm"
+    build = __import__("build")
+    check("v34 workbook built from git HEAD", build.main(["--new", str(old), "--src", str(old_src / "src"), "--no-setup"]) == 0)
+    data = work / "v34_data"
+    data.mkdir()
+    with xlauto.ExcelSession() as s:
+        wb = s.xl.Workbooks.Open(str(old))
+        s.run(wb, "SifirdanKur")
+        src = make_source(s.xl, data)
+        mst = make_master(s.xl, data)
+        pnl = wb.Worksheets("Panel")
+        pnl.Cells(10, 3).Value = src.Name
+        pnl.Cells(11, 3).Value = "Sayfa1"
+        pnl.Cells(14, 3).Value = mst.Name
+        pnl.Cells(15, 3).Value = "Ana"
+        s.run(wb, "Yenile")
+        r_pol, r_sir, r_hes = (panel_row_of(pnl, x) for x in ("A - Pol No", "E - Sirket", "G - Hesap"))
+        pnl.Cells(r_pol, 3).Value = "A - POLICE NO"
+        pnl.Cells(r_sir, 3).Value = "E - SIRKET"
+        pnl.Cells(r_sir, 5).Value = "AXA, MAPFRE"          # v34 FILTRE = c+4
+        pnl.Cells(r_hes, 6).Value = "FORMUL"               # v34 ISLEM  = c+5
+        pnl.Cells(9, 4).Value = "I - RAPOR_DONEMI"
+        pnl.Cells(9, 5).Value = "EYLUL 2026"
+        pnl.Cells(19, 3).Value = "D - TUTAR"
+        pnl.Cells(8, 3).Value = "Evet"
+        check("v34 panel marker", "v34" in wb.Names("AP_DUZEN").RefersTo, wb.Names("AP_DUZEN").RefersTo)
+        wb.Save()
+        wb.Close(False)
+    new = work / "v34_to_v1_0.xlsm"
+    check("v34 -> v1.0 upgrade build", build.main(["--upgrade", str(old), "--out", str(new)]) == 0)
+    with xlauto.ExcelSession() as s:
+        wb = s.xl.Workbooks.Open(str(new))
+        pnl = wb.Worksheets("Panel")
+        check("marker now v1.0", "v1.0" in wb.Names("AP_DUZEN").RefersTo)
+        check("v34: mapping kept", pnl.Cells(r_pol, 3).Value == "A - POLICE NO" and pnl.Cells(r_sir, 3).Value == "E - SIRKET")
+        check("v34: filter moved to c+3", pnl.Cells(r_sir, 4).Value == "AXA, MAPFRE", repr(pnl.Cells(r_sir, 4).Value))
+        check("v34: ISLEM moved to c+4", "FORM" in str(pnl.Cells(r_hes, 5).Value or ""), repr(pnl.Cells(r_hes, 5).Value))
+        check("v34: map header at c+5", "HAR" in str(pnl.Cells(28, 6).Value), str(pnl.Cells(28, 6).Value))
+        check("v34: fixed value kept", pnl.Cells(9, 4).Value == "I - RAPOR_DONEMI" and pnl.Cells(9, 5).Value == "EYLUL 2026")
+        check("v34: settings kept", pnl.Cells(19, 3).Value == "D - TUTAR" and pnl.Cells(8, 3).Value == "Evet")
+        check("v34: scorecard drawn", "KONTROL" in str(pnl.Cells(8, 6).Value))
+        wb.Close(False)
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--panel", default=str(ROOT / "dist" / "AktarimPaneli_v34.xlsm"))
+    ap.add_argument("--panel", default=str(ROOT / "dist" / "AktarimPaneli_v1.0.xlsm"))
     ap.add_argument("--v33", default=None)
     ap.add_argument("--only-migration", action="store_true")
     args = ap.parse_args()
@@ -571,6 +681,11 @@ def main():
     except Exception:
         traceback.print_exc()
         check("scenario 1-7 completed without exception", False)
+    try:
+        run_migration_v34(work)
+    except Exception:
+        traceback.print_exc()
+        check("v34 migration completed without exception", False)
     if args.v33:
         try:
             run_migration(Path(args.v33).resolve(), work)

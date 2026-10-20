@@ -2,7 +2,7 @@ Attribute VB_Name = "M07_Kayit"
 Option Explicit
 
 ' ============================================================
-' AKTARIM PANELI  v34  -  M07_Kayit  (GERI AL, GECMIS, RAPOR)
+' AKTARIM PANELI  v1.0  -  M07_Kayit  (GERI AL, GECMIS, RAPOR)
 '
 '   GeriAl        : IKI ASAMALI, ATOMIK geri alma
 '                   1) butun kayitlar dogrulanir: dosya acik mi, salt
@@ -251,6 +251,8 @@ Public Sub GeriAl()
             yeniSonSatir & ". Aktarimi yapan: " & yapan, _
             IIf(partiModu, "Partinin tamami", "Son aktarim") & IIf(isaretSayisi = 0, ", tum sutunlar", ", SEC isaretli sutunlar"), _
             "", "", DosyaAdiGuvenli(sonHedefWb), SayfaAdiGuvenli(sonHedefWs)
+
+    DenetimSessiz
 
     MsgBox "Geri alma tamamlandi." & vbNewLine & vbNewLine & _
            "Geri alinan sutun        : " & temizlenen & IIf(geriYuklenen > 0, "  (" & geriYuklenen & " tanesi yedekten geri yuklendi)", "") & vbNewLine & _
@@ -831,6 +833,16 @@ Public Sub RaporSayfasiHazirla()
         End With
     End If
 
+    ' v1.0: kontrol noktasi sutunu (K1..K8 + seviye), denetci filtresi icin
+    If Trim$(GuvenliMetin(rpr.Cells(1, R_KONTROL).Value)) = "" Then
+        rpr.Cells(1, R_KONTROL).Value = "KONTROL NOKTASI"
+        With rpr.Cells(1, R_KONTROL)
+            .Font.Bold = True
+            .Interior.Color = Palet(prTabloBaslik)
+            .ColumnWidth = 16
+        End With
+    End If
+
 End Sub
 
 
@@ -845,7 +857,7 @@ Private Sub RaporBasligiYaz(ByVal rpr As Worksheet)
                       "SUTUN SAYISI", "HEDEF ILK SATIR", "HEDEF SON SATIR", "FILTRE", _
                       "SABIT DEGER", "TUTAR MUTABAKATI", "AYLIK DOSYA TOPLAMI", _
                       "TUTAR HEDEF SUTUN", "EXCEL KULLANICI ADI", "HEDEFE YAZILAN TOPLAM", _
-                      "HEDEF ONCEKI TOPLAM", "HEDEF YENI TOPLAM")
+                      "HEDEF ONCEKI TOPLAM", "HEDEF YENI TOPLAM", "KONTROL NOKTASI")
     For i = 0 To UBound(basliklar)
         rpr.Cells(1, i + 1).Value = basliklar(i)
     Next i
@@ -964,7 +976,8 @@ Public Function OlayYaz(ByVal olay As String, ByVal panelNo As Long, _
                         Optional ByVal kaynakDosya As String = "", _
                         Optional ByVal kaynakSayfa As String = "", _
                         Optional ByVal hedefDosya As String = "", _
-                        Optional ByVal hedefSayfa As String = "") As Long
+                        Optional ByVal hedefSayfa As String = "", _
+                        Optional ByVal kontrol As String = "") As Long
 
     Dim rpr As Worksheet
     Dim yaz As Long
@@ -990,6 +1003,14 @@ Public Function OlayYaz(ByVal olay As String, ByVal panelNo As Long, _
     If hedefDosya <> "" Then rpr.Cells(yaz, R_HEDEF_DOSYA).Value = HucreMetni(hedefDosya)
     If hedefSayfa <> "" Then rpr.Cells(yaz, R_HEDEF_SAYFA).Value = "'" & hedefSayfa
     rpr.Cells(yaz, R_EXCEL_KULLANICI).Value = HucreMetni(Application.UserName)
+    If kontrol <> "" Then
+        rpr.Cells(yaz, R_KONTROL).Value = kontrol
+        If InStr(kontrol, KD_ENGEL) > 0 Then
+            rpr.Cells(yaz, R_KONTROL).Interior.Color = Palet(prDurumHata)
+        Else
+            rpr.Cells(yaz, R_KONTROL).Interior.Color = Palet(prDurumUyari)
+        End If
+    End If
 
     OlayYaz = yaz
 
@@ -1027,6 +1048,12 @@ Public Sub RaporYaz(ByVal partiNo As Long, ByVal aktarimNo As Long, ByVal k As L
     rpr.Cells(yaz, R_FILTRE).Value = HucreMetni(Trim$(filtre))
     rpr.Cells(yaz, R_SABIT).Value = HucreMetni(sabit)
     rpr.Cells(yaz, R_MUTABAKAT).Value = HucreMetni(mutabakat)
+    If Left$(mutabakat, 7) = "TUTUYOR" Then
+        rpr.Cells(yaz, R_MUTABAKAT).Interior.Color = Palet(prDurumHazir)
+    ElseIf Left$(mutabakat, 8) = "FARK VAR" Then
+        rpr.Cells(yaz, R_MUTABAKAT).Interior.Color = Palet(prDurumHata)
+        rpr.Cells(yaz, R_MUTABAKAT).Font.Bold = True
+    End If
     If tutarVar Then
         rpr.Cells(yaz, R_AYLIK_TOPLAM).Value = kaynakToplam
         rpr.Cells(yaz, R_TUTAR_SUTUN).Value = tutarHedefHarf

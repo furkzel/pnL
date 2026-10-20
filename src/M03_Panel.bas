@@ -2,7 +2,7 @@ Attribute VB_Name = "M03_Panel"
 Option Explicit
 
 ' ============================================================
-' AKTARIM PANELI  v34  -  M03_Panel
+' AKTARIM PANELI  v1.0  -  M03_Panel
 '
 ' Panel sayfasinin GEOMETRISI ve GORUNUMU:
 '   - blok konumlari (BlokSutun, AktifBlok, Ayar ...)
@@ -23,6 +23,7 @@ Option Explicit
 
 Private Const ONEK_SEKIL As String = "AP_"
 Private Const GOSTERGE_ADI As String = "AP_GOSTERGE"
+Public Const HAZIRLIK_ADI As String = "AP_HAZIRLIK"
 
 ' Office sabitleri (Mac / eski surumlerde ad cozumlemesi sorun olmasin)
 Private Const SEKIL_YUVARLAK As Long = 5     ' msoShapeRoundedRectangle
@@ -295,9 +296,9 @@ Public Sub BlokCiz(ByVal pnl As Worksheet, ByVal k As Long)
     pnl.Columns(c + OFS_KAYNAK).ColumnWidth = 30
     pnl.Columns(c + OFS_TIP).ColumnWidth = 13
     pnl.Columns(c + OFS_HEDEF).ColumnWidth = 30
-    pnl.Columns(c + OFS_HARITA).ColumnWidth = 30
-    pnl.Columns(c + OFS_FILTRE).ColumnWidth = 18
-    pnl.Columns(c + OFS_ISLEM).ColumnWidth = 12
+    pnl.Columns(c + OFS_FILTRE).ColumnWidth = 24      ' ayni zamanda SABIT sutun adi
+    pnl.Columns(c + OFS_ISLEM).ColumnWidth = 16       ' ayni zamanda SABIT deger
+    pnl.Columns(c + OFS_HARITA).ColumnWidth = 30      ' ayni zamanda KONTROL karnesi
 
     ' --- Blok basligi ---
     With pnl.Range(pnl.Cells(SATIR_BLOK_BASLIK, c), pnl.Cells(SATIR_BLOK_BASLIK, c + BLOK_GENISLIK - 1))
@@ -355,8 +356,14 @@ Public Sub BlokCiz(ByVal pnl As Worksheet, ByVal k As Long)
     If AyarMetni(pnl, k, SATIR_YAZIM) = "" Then Ayar(pnl, k, SATIR_YAZIM).Value = YazimMetni(ymSayfaSonu)
     DahilBoya pnl, k
 
-    ' --- SABIT DEGERLER kutusu ---
+    ' --- SABIT DEGERLER kutusu ve KONTROL NOKTALARI karnesi ---
     SabitBasligiCiz pnl, k
+    KarneCiz pnl, k
+
+    ' --- Kart cerceveleri: ayarlar | sabit degerler | kontrol karnesi ---
+    KartCercevesi pnl.Range(pnl.Cells(SATIR_DAHIL, c), pnl.Cells(SATIR_AYAR_SON, c + OFS_AYAR))
+    KartCercevesi pnl.Range(pnl.Cells(SABIT_BASLIK, c + OFS_SABIT_SUTUN), pnl.Cells(SABIT_NOT, c + OFS_SABIT_DEGER))
+    KartCercevesi pnl.Range(pnl.Cells(KARNE_BASLIK, c + OFS_KARNE), pnl.Cells(KARNE_NOT, c + OFS_KARNE))
 
     ' --- DURUM satiri ---
     With pnl.Range(pnl.Cells(SATIR_DURUM, c), pnl.Cells(SATIR_DURUM, c + BLOK_GENISLIK - 1))
@@ -381,8 +388,27 @@ Public Sub BlokCiz(ByVal pnl As Worksheet, ByVal k As Long)
 End Sub
 
 
+' Ayar kartinin cevresine ince, yumusak cerceve
+Public Sub KartCercevesi(ByVal rng As Range)
+    Dim kenar As Variant
+    For Each kenar In Array(xlEdgeLeft, xlEdgeTop, xlEdgeRight, xlEdgeBottom)
+        With rng.Borders(kenar)
+            .LineStyle = xlContinuous
+            .Weight = xlThin
+            .Color = Palet(prCerceve)
+        End With
+    Next kenar
+End Sub
+
+
+' Etiket c..c+1 BIRLESIK hucreye yazilir (deger c+2): etiket dar
+' VERI TIPI sutununa tasip kopuk gorunmez.
 Private Sub EtiketYaz(ByVal pnl As Worksheet, ByVal r As Long, ByVal c As Long, _
                       ByVal metin As String, ByVal kalin As Boolean)
+    With pnl.Range(pnl.Cells(r, c + OFS_ETIKET), pnl.Cells(r, c + OFS_AYAR - 1))
+        .UnMerge
+        .Merge
+    End With
     With pnl.Cells(r, c + OFS_ETIKET)
         .Value = metin
         .Font.Bold = kalin
@@ -394,6 +420,10 @@ End Sub
 
 
 Private Sub BolumYaz(ByVal pnl As Worksheet, ByVal r As Long, ByVal c As Long, ByVal metin As String)
+    With pnl.Range(pnl.Cells(r, c + OFS_ETIKET), pnl.Cells(r, c + OFS_AYAR - 1))
+        .UnMerge
+        .Merge
+    End With
     With pnl.Cells(r, c + OFS_ETIKET)
         .Value = metin
         .Font.Bold = True
@@ -520,6 +550,7 @@ End Sub
 
 ' "Bu paneli aktar" hucresinin rengi: Evet yesil, Hayir acik kirmizi
 Public Sub DahilBoya(ByVal pnl As Worksheet, ByVal k As Long)
+    HazirlikGuncelle pnl
     With Ayar(pnl, k, SATIR_DAHIL)
         .Font.Bold = True
         If DahilMi(pnl, k) Then
@@ -560,7 +591,8 @@ End Sub
 '  2 ESLESTIR & DOGRULA : Otomatik Eslestir, On Kontrol, Oneri Onayla
 '                         (akilli), Profil Kaydet
 '  3 AKTAR & GERI AL    : AKTAR, Secili Sutun Yamasi, Geri Al, Tutar Mutabakati
-'  PANEL                : < Aktif panel gostergesi >, Kilavuz, Tani
+'  PANEL                : < Aktif panel gostergesi >, Kilavuz, Denetim, Tani
+'  HAZIRLIK             : aktarima dahil panellerin K1..K8 karnesinden canli ozet
 '  Numarali 4 ana buton (1 YENILE, 2 Otomatik Eslestir, 3 On Kontrol,
 '  4 AKTAR) yeni kullaniciya yolu gosterir.
 ' ============================================================
@@ -676,11 +708,26 @@ Public Sub ButonlariKur(ByVal pnl As Worksheet)
     x = x + 170 + 4
     ButonEkle pnl, "PanelSonraki", ChrW(9654), x, yA, 26, h, STIL_IKINCIL
     x = x0
-    ButonEkle pnl, "Yardim", TR("K#ILAVUZ"), x, yB, 112, h, STIL_IKINCIL: x = x + 112 + ara
-    ButonEkle pnl, "Tani", TR("Tan#i"), x, yB, 112, h, STIL_IKINCIL
+    ButonEkle pnl, "Yardim", TR("K#ILAVUZ"), x, yB, 72, h, STIL_IKINCIL: x = x + 72 + ara
+    ButonEkle pnl, "DenetimOzeti", "Denetim", x, yB, 72, h, STIL_IKINCIL: x = x + 72 + ara
+    ButonEkle pnl, "Tani", TR("Tan#i"), x, yB, 72, h, STIL_IKINCIL
+    x0 = x0 + 230 + grupAra
+    AyracCiz pnl, 4, x0 - grupAra / 2, yE, yB + h
+
+    ' --- HAZIRLIK gostergesi: aktarima dahil panellerin karne ozeti ---
+    GrupEtiketi pnl, 5, TR("HAZIRLIK"), x0, yE
+    MetinKutusu pnl, HAZIRLIK_ADI, TR("Haz#irl#ik hesaplan#iyor"), x0, yA, 200, yB + h - yA, 9, Palet(prSeritYazi), True
+    With pnl.Shapes(HAZIRLIK_ADI)
+        .Fill.Visible = -1
+        .Fill.ForeColor.RGB = Palet(prButonIkincil)
+        .TextFrame2.WordWrap = -1
+        .TextFrame2.MarginLeft = 8
+        .OnAction = "HazirlikGoster"
+    End With
 
     g_SonAktifBlok = 0
     AktifPanelGoster pnl, AktifBlok()
+    HazirlikGuncelle pnl
 
 End Sub
 

@@ -3,7 +3,7 @@ Option Explicit
 Option Private Module
 
 ' ============================================================
-' AKTARIM PANELI  v34  -  M02_Yardimci
+' AKTARIM PANELI  v1.0  -  M02_Yardimci
 '
 ' Uygulamadan bagimsiz yardimcilar. Bu modul hicbir sayfa duzenini
 ' bilmez (Panel'e ozgu geometri M03_Panel'dedir).

@@ -1,246 +1,319 @@
-# Aktarım Paneli v35: Veri Aktarım Paneli
+# Aktarım Paneli v1.0
 
-An Excel VBA tool for actuarial closing. It copies each month's claim files
-(*Ödenen*, *Muallak*, …) into large cumulative master workbooks (870 000+ rows)
-**by column mapping**. Every transfer is checked before writing, reconciled
-after writing, logged, and reversible.
+**Column-mapped, audited data transfer for actuarial closing in Excel.**
 
-v34 is a full refactor of v33. The monolithic `Module1/2/3` became nine
-single-purpose modules that are edited in VS Code and built into the workbook
-with a script. The analytics pages from v33 (Özet, Dosya Durumu, Pivot Kontrol)
-were removed. The transfer engine kept all of its behaviour and gained
-data-fidelity and safety features.
+Every month, claim files (*Ödenen*, *Muallak*, …) have to be appended to cumulative
+master workbooks of 870 000+ rows. Their column names and orders never quite match.
+Aktarım Paneli maps the columns, checks the data against **eight named actuarial
+control points**, writes it, reconciles the amounts to the cent, logs every decision,
+and can undo the whole batch safely.
 
-![Panel v34](docs/panel_v34.png)
+It is pure Excel VBA: no add-ins, no ActiveX and no `Scripting` runtime. It runs on
+locked-down Citrix desktops and on Mac Excel.
 
-**Download:** https://furkzel.github.io/pnL/ offers the ready workbook (`.xlsm`),
-a macro-free copy (`.xlsx`) and the macros alone (`.zip`), for networks that
-block macro files. All three are attached to the
-[v35 release](https://github.com/furkzel/pnL/releases/tag/v35) with SHA-256
-checksums. Rebuild them with `python tools/release.py`.
+![Panel](docs/panel_v1.0.png)
+
+**At a glance**
+
+- **1 → 2 → 3 → 4 guided workflow:** Yenile, Otomatik Eşleştir, Ön Kontrol, Aktar.
+- **Live K1–K8 scorecard** per panel, aligned with ASOP 23; every finding is written to Rapor in full.
+- **Denetim sheet:** executive summary of transfers, reconciliation and control-point statistics.
+- **HAZIRLIK indicator:** how many panels are ready, flagged or blocked, at a glance.
+- **Double-click shortcuts** for DAHİL, ÖNERİ, İŞLEM and map → fixed value.
+- **Format and leading-zero protection:** codes like `0004821` and 16-digit numbers stay text.
+- **4-way amount reconciliation** (FARK 0,00) after every transfer.
+- **2-phase atomic undo with fingerprinting:** hand-edited cells are detected before anything is rolled back.
+
+**Download:** <https://furkzel.github.io/pnL/> offers the ready workbook (`.xlsm`),
+a macro-free copy (`.xlsx`) and the macros alone (`.zip`, plain text), for networks that
+block macro files. SHA-256 checksums are on the page.
 
 ---
 
-## Quick start
+## Contents
+1. [The 1 → 2 → 3 → 4 workflow](#the-1--2--3--4-workflow)
+2. [The eight actuarial control points (K1–K8)](#the-eight-actuarial-control-points-k1k8)
+3. [ASOP 23 data-quality alignment](#asop-23-data-quality-alignment)
+4. [The Panel screen](#the-panel-screen)
+5. [Transfer engine](#transfer-engine)
+6. [Audit trail: Rapor, Gecmis, Denetim](#audit-trail-rapor-gecmis-denetim)
+7. [Install, upgrade, release](#install-upgrade-release)
+8. [Architecture](#architecture)
+9. [Developer workflow and CLI](#developer-workflow-and-cli)
+10. [Verification and performance](#verification-and-performance)
+11. [Rules for maintainers](#rules-for-maintainers)
+12. [Limitations and version history](#limitations-and-version-history)
 
-| Goal | Command |
+---
+
+## The 1 → 2 → 3 → 4 workflow
+
+The frozen ribbon at the top of **Panel** carries four numbered primary buttons. A new
+analyst follows the numbers:
+
+| Step | Button | What happens |
+|---|---|---|
+| **1** | **YENİLE** | Reads open files, sheets and headers. Restores mappings, applies the company profile, auto-selects the *Tutar / Hasar / İhbar* columns when the match is unambiguous, and refreshes the live checks K1, K4 and K5. |
+| **2** | **Otomatik Eşleştir** | Pass 1 matches identical names, using occurrence order for duplicate names. Pass 2 suggests similar names (Levenshtein ≥ 70 %), discarding candidates whose data type conflicts. Suggestions turn orange and carry a note with the top three candidates. |
+| **3** | **Ön Kontrol** | A dry run of the full transfer that writes nothing. It fills the K1–K8 scorecard, shows an executive summary, and writes every finding to Rapor. |
+| **4** | **▶ AKTAR** | Transfers every panel marked "Bu paneli aktar = Evet" as one batch (*parti*). Each panel is confirmed, then written, then reconciled with four totals. |
+
+Secondary actions sit next to them:
+- **Panels and sets:** + Panel / − Panel, Set Yükle / Kaydet / Sil
+- **Mapping:** ✓ Öneri Onayla (context-aware), Profil Kaydet
+- **Correction and checks:** Seçili Sütun Yaması, ↶ Geri Al, Tutar Mutabakatı
+- **Help and navigation:** Kılavuz, Denetim, Tanı, and ◀ AKTİF: PANEL k ▶
+
+The **HAZIRLIK** pill summarises the scorecards of all included panels. It is green
+when the batch is ready for AKTAR, amber when a panel still needs Ön Kontrol or has
+DİKKAT items, and red on any ENGEL. Click it for the per-panel table.
+
+---
+
+## The eight actuarial control points (K1–K8)
+
+Every finding is tagged `[Kn]` in the dialogs, raises that point's status on the panel
+scorecard, and is written to Rapor in full with a `KONTROL NOKTASI` value such as
+`K8 DIKKAT`.
+
+Statuses: **✓ OK** · **! DİKKAT** (read and confirm; the default button is *No*) ·
+**✕ ENGEL** (nothing is written) · **○** waiting for Ön Kontrol · **–** not applicable.
+
+| | Control point | What is checked | Typical result |
+|---|---|---|---|
+| **K1** | Dosya, başlık & hedef | File and sheet reachable; master not read-only; every mapped and fixed header still where the panel expects it (or found by name); no two sources writing to one target; no pending suggestions; target range valid (patch range, undone gap, row limit) | ENGEL / DİKKAT |
+| **K2** | Mükerrer aktarım | The same monthly file/sheet is already active in this master (not undone) | DİKKAT (AKTAR asks) |
+| **K3** | Son satır & kuyruk | Majority last row vs. latest row; footer block separated by blank rows (grand totals). The rows that would be excluded are **previewed** | DİKKAT, user decides |
+| **K4** | Zorunlu (yeşil) sütun | Green (mandatory) master columns that stay unmapped, and **blank cells inside mapped green columns**, with sample rows | DİKKAT |
+| **K5** | Veri tipi & sabit değer | Source vs. target type conflict (TARİH/SAYI/METİN); fixed value vs. target type (e.g. `EYLUL 2026` into a date column) | DİKKAT |
+| **K6** | Biçim & kod koruması | Leading-zero codes, 16+ digit IDs and `=`-like text written as text; `#####` date overflow fallback; formula transfer | DİKKAT (informational) |
+| **K7** | Tutar & mutabakat | Non-numeric, blank and negative amounts in the amount column, before writing. After writing: **source = written** and **master Δ = written − overwritten**, both to 0,00. A difference turns K7 into ENGEL | DİKKAT / ENGEL |
+| **K8** | Hasar & ihbar tarihi | İhbar before hasar, blank dates, unparseable values, text dates (sample rows) | DİKKAT |
+
+K1, K4 and K5 update live whenever you refresh or change a mapping. K2, K3, K6, K7 and
+K8 need the data, so they are evaluated by Ön Kontrol and AKTAR. After a mapping
+change, the data-dependent points return to ○ until you run Ön Kontrol again, so the
+scorecard never shows a stale pass.
+
+---
+
+## ASOP 23 data-quality alignment
+
+ASOP 23 (*Data Quality*) asks the actuary to judge whether data is appropriate,
+reasonably complete and consistent, to review it for reasonableness, and to disclose
+its limitations. The tool **supports** those steps; it does not replace the actuary's
+judgment, and running it does not by itself establish compliance.
+
+| ASOP 23 expectation | Where the tool supports it |
 |---|---|
-| Build a fresh workbook | `python tools/build.py --new dist/AktarimPaneli_v34.xlsm` |
-| Upgrade a v33 workbook (works on a **copy**; the input is never modified) | `python tools/build.py --upgrade path\to\v33.xlsm --out dist\v33_upgraded.xlsm` |
-| Run the end-to-end tests (119 checks) | `python tools/test_e2e.py --v33 path\to\v33.xlsm` |
-| Benchmark on large files | `python tools/perf.py --rows 200000 --master 300000` |
-| Pull edits made in the VBA editor back into `src/` | `python tools/export.py dist/AktarimPaneli_v34.xlsm` |
-| ASCII check only | `python tools/build.py --check` |
-
-Requirements: Windows, Excel, Python 3.10+ with `pywin32`, and in Excel
-*File › Options › Trust Center › Macro Settings › "Trust access to the VBA
-project object model"*. `tools/screenshot.py` additionally needs `pdftoppm`
-(Poppler, TeX Live or MiKTeX) and `Pillow`.
-
-All tools start their **own invisible Excel instance**. They don't touch
-workbooks you have open, and a watchdog answers the macros' MsgBox/InputBox
-dialogs so automation never hangs.
-
-### Manual installation (without Python)
-
-1. Make a backup of the workbook.
-2. `Alt+F11` › remove `Module1`, `Module2`, `Module3`. Also remove any old test
-   modules (`TestOrtam`, `OzetTest`, `Yukleyici`, `Resim2`, test `Sozluk`),
-   because they call v33 code that no longer exists.
-3. *File › Import File…* : `src/Sozluk.cls` and every `src/M0*.bas`.
-4. Open the **Panel** sheet's code module and paste in `src/Panel.cls` from
-   `Option Explicit` downwards. Do the same with `ThisWorkbook` and
-   `src/ThisWorkbook.cls`.
-5. *Debug › Compile VBAProject*, then `Alt+F8` › **SifirdanKur** › Run, then save.
-
-`SifirdanKur` keeps Rapor, Gecmis, Profiller and Setler. It moves the panel
-to the v34 layout while keeping every setting, fixed value, mapping, filter and
-pending suggestion. It deletes the legacy analytics sheets and their `OZ_*`,
-`V_*`, `T_*`, `L_*` names, and rebuilds Kılavuz and Geliştirici.
-
----
-
-## Repository layout
-
-```
-src/                     single source of truth (pure ASCII VBA)
-  Sozluk.cls             native dictionary (replaces Scripting.Dictionary)
-  M01_Ayarlar.bas        constants, enums, layout map, colour palette, globals
-  M02_Yardimci.bas       BH/Normalize/TR, SutunOku, file/sheet lookup, data types,
-                         BaslikDogrula, menus, AlanTemizle, EkranKilitle/EkranAc
-  M03_Panel.bas          block geometry, ribbon, sticky navigation, add/remove panel
-  M04_Yenile.bas         Yenile (single-pass sampling), menus, DURUM, fixed values,
-                         target map, data-type column, cell-change router
-  M05_Eslestirme.bas     auto-mapping, smart suggestion approval, profiles, sets
-  M06_Aktarim.bas        transfer engine, filter engine, format guard,
-                         formula row shift, patch mode, Ön Kontrol (dry run)
-  M07_Kayit.bas          Geri Al (2-phase + fingerprint + backup), Gecmis, Rapor,
-                         Tutar Mutabakatı
-  M08_Kurulum.bas        SifirdanKur, PaneliYenidenKur (v33 migration), PanelKur, Tani
-  M09_Kilavuz.bas        accordion guide (Kılavuz) and developer handoff (Geliştirici)
-  Panel.cls              code of the "Panel" sheet (events)
-  ThisWorkbook.cls       Workbook_Open: restores Excel state after an aborted macro
-tools/                   build.py, export.py, test_e2e.py, perf.py, screenshot.py, xlauto.py
-docs/                    screenshots
-dist/                    build output (reproducible, git-ignored)
-```
-
-Each module states its responsibilities in its header comment. Layout
-positions live only in `M01_Ayarlar` (`OFS_*`, `SATIR_*`, `LST_*`, `R_*`, `G_*`,
-`P_*`, `ST_*`). There are no magic numbers such as `Cells(i, 8)` or
-`Cells(2, 341)` elsewhere.
+| Data appropriate for the purpose; correct fields used | K1 header re-validation and duplicate-target ENGEL; K5 type conflicts; orange suggestions must be approved |
+| Comprehensiveness / completeness | K3 tail analysis (nothing silently dropped or added); K4 blank mandatory cells; K7 blank and non-numeric amounts |
+| Reasonableness and consistency review | K5, K8 date logic; K7 four-way reconciliation to 0,00; K2 duplicate source detection |
+| Integrity of data during processing | K6 format guard (codes, IDs, formula text); formula row shifting; fingerprinted undo |
+| Documentation and disclosure of limitations | Rapor: every DİKKAT/ENGEL item and every decision, tagged K1–K8; Gecmis: column-level ledger; Denetim: one-page summary |
 
 ---
 
 ## The Panel screen
 
-**Ribbon**: frozen rows 1–5, so it stays visible when scrolling down. Buttons
-are grouped by workflow stage:
-
-| 1 · HAZIRLA | 2 · EŞLEŞTİR & DOĞRULA | 3 · AKTAR & GERİ AL | PANEL · YARDIM |
-|---|---|---|---|
-| **1 YENİLE**, + Panel, − Panel | **2 Otomatik Eşleştir**, **3 Ön Kontrol** | **4 ▶ AKTAR**, Seçili Sütun Yaması | ◀ *AKTİF: PANEL k* ▶ |
-| Set Yükle, Set Kaydet, (small) Set Sil | ✓ Öneri Onayla, Profil Kaydet | **↶ Geri Al**, Tutar Mutabakatı | Kılavuz, Tanı |
-
-v33 had 24 scattered form buttons. v35 has 18. The four numbered primary
-buttons are wider and use a larger font, so the 1 → 2 → 3 → 4 path is
-visible at a glance. Rarely used macros left the ribbon but still run from
-`Alt+F8`: `ProfilSil`, `MenuleriTazele` (already automatic),
-`IsaretleriTemizle`, `ButonlariYenile`, `PaneliYenidenKur`.
-
-**Double-click shortcuts.** Double-clicking an orange suggestion approves it.
-Double-clicking an İŞLEM cell toggles SEÇ and leaves FORMÜL untouched.
-
-**Auto-detected control columns.** If *Tutar*, *Hasar tarihi* or *İhbar tarihi*
-is empty, Yenile fills it when the master has a single clear match (TUTAR /
-ÖDENEN / MUALLAK, HASAR + TARİH, İHBAR + TARİH). A value typed by the user or
-loaded from a profile or set is never overwritten. DURUM notes the choice.
-
-- **Öneri Onayla is context-aware.** If suggestion rows are selected, only those
-  are approved, without a dialog for a single one. Otherwise every suggestion
-  in the panel is listed for confirmation.
-- **Ön Kontrol** replaces the v33 `Kontrol1..3` buttons. Those wrote criteria
-  cells and an AdvancedFilter into the master file. Ön Kontrol runs the whole
-  transfer pipeline as a dry run and writes nothing.
-- **◀ ▶ navigation and the "AKTİF" indicator** make it obvious which panel
-  every button acts on. The ribbon follows horizontal scrolling, and the
-  active block's title is highlighted.
-
-**Block** (up to 10 side by side, 6 columns instead of 7):
-
 ```
- c+0 KAYNAK SÜTUN | c+1 VERİ TİPİ | c+2 HEDEF SÜTUN | c+3 HEDEF HARİTASI | c+4 FİLTRE | c+5 İŞLEM
- settings: label c, value c+2         SABİT DEĞERLER box: column c+3, value c+4
+┌ ribbon (frozen) ─ 1 HAZIRLA │ 2 EŞLEŞTİR & DOĞRULA │ 3 AKTAR & GERİ AL │ PANEL·YARDIM │ HAZIRLIK ┐
+├ PANEL k ─ file / sheet ───────────────────────────────────────────────────────────────────────┤
+│ settings card (labels c..c+1, values c+2) │ SABİT DEĞERLER (c+3/c+4) │ KONTROL NOKTALARI (c+5)│
+│  Bu paneli aktar · KAYNAK · HEDEF · KONTROL │  up to 15 fixed values   │  K1 … K8 + last check   │
+├ DURUM: one-line status ───────────────────────────────────────────────────────────────────────┤
+│ KAYNAK SÜTUN │ VERİ TİPİ │ HEDEF SÜTUN │ FİLTRE │ İŞLEM │ HEDEF HARİTASI (read-only)          │
+└───────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- The settings are grouped into KAYNAK / HEDEF / EŞLEŞTİRME·KONTROL sections.
-  "Bu paneli aktar" turns green or red.
-- **VERİ TİPİ** sits next to the source column and turns red as `TARIH <> SAYI`
-  on a type conflict.
-- **İŞLEM** merges the v33 `GERİ AL` and `FORMÜL` flag columns into one
-  dropdown: `SEÇ`, `FORMÜL`, `SEÇ + FORMÜL`.
-- Header hover notes explain the filter syntax, İŞLEM, the type colours and the
-  target map.
-- A removed panel is hidden, not deleted. `+ Panel` reuses the hidden block, so
-  block numbers and saved sets never shift.
+- Up to 10 blocks side by side. A removed block is hidden, not deleted, so panel
+  numbers and saved sets never shift.
+- Columns you type into (HEDEF, FİLTRE, İŞLEM) sit together. The read-only map of
+  every master column, coloured exactly like the master's headers, sits at the right
+  edge.
+- Hover over the table and card headers for notes on the filter syntax, İŞLEM, the type
+  colours, the map and the control points.
+
+**Double-click shortcuts**
+
+| Double-click on… | Effect |
+|---|---|
+| "Bu paneli aktar" value | Evet ↔ Hayır, with the colour and HAZIRLIK updated instantly |
+| an orange suggestion in HEDEF SÜTUN | approves it |
+| an İŞLEM cell | toggles SEÇ (keeps FORMÜL) |
+| an unfilled column in HEDEF HARİTASI (e.g. red `<< YESIL, BOSTA`) | adds it to SABİT DEĞERLER and jumps to its value cell |
 
 ---
 
-## What changed in the engine
+## Transfer engine
 
-### Kept, with behaviour unchanged
-
-The following carry over from v33: multi-panel batches with one *parti* number;
-hidden-block reuse; partial filename and numeric/date sheet-name tolerance;
-two-pass mapping (exact, then Levenshtein ≥ 0.70 with type filtering); learning
-profiles (aliases in `DIGER ADLAR`, deliberately unmapped columns,
-non-destructive merge); target map with green-column alerts; the ENGEL/DIKKAT
-gate; majority-row and separator-block tail detection; the duplicate-transfer
-warning; header re-validation before writing; *Sona ekle*, *Sütunun kendi
-sonu* and *Geri alınan aralığa* with row insertion and ledger shifting; and
-two-phase undo.
-
-### New in v34
-
-| Area | What it does |
+| Capability | Behaviour |
 |---|---|
-| **Format fidelity** | Excel coerces text written through `Range.Value`: `"0004821"` becomes `4821`, a 19-digit ID becomes `1.23E+18`, and `"=..."` becomes a live formula. `KorumaGerekir` writes these values as text: leading zeros, 16+ digits, formula-like text, and numeric- or date-looking text going into a METİN column. Everything else is written exactly as in v33. New rows inherit the number format of the row above. DIKKAT reports how many cells were protected. |
-| **Formula transfer** | Relative **row** references are shifted, and column letters stay as they are. Source row 5 `=B5*C5` becomes target row 870005 `=B870005*C870005`. Each distinct formula pattern is converted once via `ConvertFormula` (`FormulSatirKaydir`). |
-| **Filter syntax** | `AXA` · `AXA, ALLIANZ` · `AX*` / `A?A` · `>100`, `<=500`, `>=01.01.2026` · `<>IPTAL` · `BOS` / `DOLU`. If a value itself contains a comma and exists verbatim in the column, it is treated as one value. |
-| **Seçili Sütun Yaması** | With *Sayfanın en altı*, columns marked SEÇ overwrite the rows of the **last active transfer** of the same source. Old cell values are saved to a hidden `Yedek` sheet first, and Geri Al restores them. A row-count mismatch is an ENGEL. |
-| **Undo fingerprint** | Each Gecmis row stores `IMZA` (non-empty count, sum, first and last value). If rows were inserted or deleted in the master after the transfer, Geri Al shows which ranges no longer match and stops unless the user explicitly confirms. Header mismatch, closed or read-only files, and a missing backup remain hard stops. |
-| **Reconciliation** | The completion dialog and Rapor show four figures: *Kaynaktan okunan*, *Hedefe yazılan*, *Hedef önceki / yeni toplam*. It checks `FARK = 0.00` and that the column total grew by exactly the written amount. Sums use `AGGREGATE(9,6)`, which ignores error cells. |
-| **Source date checks** | Moved out of the master file. Rows where *ihbar* is before *hasar*, empty dates, unparseable values and text dates are counted (with sample row numbers) on the rows that will actually be transferred. |
-| **Fast Yenile** | One read per source column, at most 10 000 rows, gives the data type and the filter candidates. Header and list writes are batched. See the benchmark below. |
-| **Native dictionary** | `Sozluk.cls` is backed by `Collection` and replaces all ~40 `CreateObject("Scripting.Dictionary")` calls. There is no COM dependency left. |
-| **State guard** | `EkranKilitle`/`EkranAc` with a nesting depth covers ScreenUpdating, EnableEvents, DisplayAlerts and Calculation. `Workbook_Open` and `Tani` restore Excel if a macro was aborted. |
-
-### New in v35: restored and strengthened checkpoints
-
-| Checkpoint | Behaviour |
-|---|---|
-| Duplicate transfer in Ön Kontrol | The dry run now warns `MUKERRER AKTARIM UYARISI` when the same source is already in the master and not undone. Previously only AKTAR asked. |
-| Suspicious tail in Ön Kontrol | The dry run shows what is in the excluded bottom rows, e.g. `203. satir: 447400 \| TOPLAM`. |
-| Blank cells in green columns | Rows to be transferred are counted where a mapped mandatory (green) column is empty, with sample row numbers. v34 only caught green columns that were not mapped at all. |
-| Amount column integrity | Non-numeric values (`1.200 TL`, `YOK`, errors), blanks and negative amounts are counted with sample rows. These are silently skipped by both the source sum and `AGGREGATE`, so the reconciliation can say TUTUYOR while data is missing. |
-| Fixed-value type | A fixed value whose type conflicts with its target column is flagged, e.g. `EYLUL 2026` going into a date column. |
-| Readable warning lists | Each item keeps at least 110 characters, up to 10 items are shown, and the rest are summarised as `... ve X madde daha`. Ön Kontrol writes every ENGEL and DIKKAT item unshortened to its own Rapor row and offers to open Rapor. |
-| Batch reconciliation | Tutar Mutabakatı re-checks **every** transfer of the last active batch and shows one table, with `>>` marking the panel you are on. |
-
-### v33 bugs fixed along the way
-
-- **Truncated DIKKAT list.** Long DIKKAT lists were cut at MsgBox's 1024-character limit, so later items were never shown, yet the dialog asked *"Maddeleri okudun mu?"*. Every item now starts with an UPPERCASE keyword and is shortened individually, so all items are visible. The full text goes to Rapor.
-- **Filter and sheet dropdowns lost their values.** Values such as `0012`, `2026` or `01.09.2026` were coerced when written to the hidden list, so the value picked never matched the source. List columns and the filter and sheet cells are now text-formatted.
-- **Appending over a formula.** If the last cell of a column held a formula returning `""`, *Sütunun kendi sonu* restarted writing at row 2 and overwrote data.
-- **False type conflict.** Text codes with leading zeros (`0004821`) were typed SAYI, so mapping them to a text column of the master was flagged as a type conflict. They now count as METİN.
-- **Whole-sheet clear.** `PanelKur` called `Cells.Clear` on a sheet with dropdowns, which risks XML corruption. It now clears explicit ranges only (`AlanTemizle`).
+| Write modes | *Sayfanın en altı* (normal); *Sütunun kendi sonu*; *Geri alınan aralığa* (refills an undone gap, inserting rows and shifting the Gecmis/Rapor ledgers if the new data is longer) |
+| Filters | `AXA` · `AXA, ALLIANZ` · `AX*` `A?A` · `>100` `<=500` `>=01.01.2026` · `<>IPTAL` · `BOS` / `DOLU`. If a value itself contains a comma and exists verbatim in the column, it is treated as one value |
+| Fixed values | Up to 15 per panel. The value dropdown is fed from the last 50 000 master rows, with a per-refresh cache |
+| Format guard (K6) | Strings Excel would corrupt (`0004821` → 4821, 19-digit IDs → `1.23E+18`, `=…` → formula) are written as text. Everything else behaves as in v33. New rows inherit the number format of the row above |
+| Formula transfer | `FORMÜL` columns shift relative **row** references and keep column letters: `=B5*C5` becomes `=B870005*C870005` |
+| Seçili Sütun Yaması | Columns marked SEÇ overwrite the rows of the last active transfer of the same source. Old values go to the hidden `Yedek` sheet and Geri Al restores them |
+| Geri Al | Two phases. **Phase 1** checks every record: file open, not read-only, header unchanged, backup present, and the **fingerprint** (count, sum, first and last value) of the written range. Rows inserted above the block are detected and the user is warned before anything is cleared. **Phase 2** clears or restores in reverse order |
+| Reconciliation (K7) | Source read, target written, master column total before and after: `FARK = 0,00` on both. Tutar Mutabakatı re-checks **every** transfer of the last batch later, in one table |
 
 ---
 
-## Verification
+## Audit trail: Rapor, Gecmis, Denetim
 
-`tools/test_e2e.py` drives the built workbook through Excel exactly as a user
-would: cell edits fire the sheet events and every dialog is answered and
-asserted. **119 / 119 checks pass.** The scenarios are:
+- **Rapor** is the human-readable event log. It records every transfer, every DİKKAT
+  and ENGEL item **unshortened in its own row**, each user decision, undo, profile and
+  set change, and each reconciliation. The `KONTROL NOKTASI` column (`K1 … K8` plus
+  level) makes it filterable. Reconciliation cells are green when TUTUYOR and red when
+  FARK VAR.
+- **Gecmis** is the undo ledger: one row per written column, with range, status,
+  fingerprint and backup reference. Don't edit it by hand.
+- **Denetim** is a one-page manager and auditor summary, regenerated after every
+  transfer and undo. It shows KPI cards (transfers, active and undone, rows and amount
+  transferred, reconciliation success rate), K1–K8 statistics (DİKKAT and ENGEL counts,
+  last seen) and the last 15 transfers.
 
-1. Yenile, auto-mapping (exact and fuzzy match with a top-3 note), smart approval, profile save and re-apply.
-2. Ön Kontrol detects the separated TOPLAM row, `ihbar < hasar`, the format guard and an unfilled green column, and writes nothing.
-3. Filters: `ALLIANZ, INC` → 50 rows, `AXA, MAPFRE` → 100, `AL*` → 100, `<>AXA` → 150, `>3000` → 39.
-4. Transfer: leading zeros, 19-digit IDs, `=HACK` kept as text, formula row shift, fixed value, inherited formats, exact reconciliation, Gecmis fingerprint.
-5. Undo restores the master exactly.
-6. Fingerprint: inserting a row above the block triggers a warning and nothing is cleared. After the row is removed, undo works.
-7. Patch overwrites one column; undo restores the old values from the backup.
-8. Gap mode with 200 rows into a 50-row gap: 150 rows are inserted, data below shifts, and the ledgers stay consistent. Also re-reconciliation, add/remove panel with hidden-block reuse, sets, and rebuilding a v34 panel in place.
-9. **Migration of the supplied v33 workbook**: settings, fixed values and mappings of both panels are preserved; legacy sheets and names are removed; Module1/2/3 are removed.
+![Denetim](docs/denetim_v1.0.png)
 
-`tools/perf.py`, with a 200 000 × 30 source and a 300 000 × 30 master (3 panels):
+---
 
-| Operation | v34 |
+## Install, upgrade, release
+
+| Goal | Command |
 |---|---|
-| Yenile (3 panels) | 2.0 s (≈0.7 s/panel; v33 on the same data: 11.8 s for 2 panels ≈ 5.9 s/panel) |
-| Otomatik Eşleştir | 0.3 s |
-| Ön Kontrol (200 000 rows × 30 cols) | 7.6 s |
-| Aktar (200 000 rows × 30 cols, incl. reconciliation) | 25 s |
-| Geri Al | 3.6 s |
+| Build a fresh workbook | `python tools/build.py --new dist/AktarimPaneli_v1.0.xlsm` |
+| Upgrade a v33 or v34 workbook (works on a **copy**; the input is never modified) | `python tools/build.py --upgrade old.xlsm --out new.xlsm` |
+| Build the 3 download packages, `SHA256SUMS.txt`, and update the page's checksum table | `python tools/release.py --version v1.0` |
+
+`SifirdanKur` is the one-click bootstrapper. It keeps Rapor, Gecmis, Profiller and
+Setler, and migrates the panel:
+- **v33** (7-column blocks) → v1.0
+- **v34** (map in the middle) → v1.0, moving FİLTRE and İŞLEM left and the map right
+
+Settings, fixed values, filters, flags, mappings and pending suggestions are all kept.
+It removes the old v33 analytics sheets and names, and rebuilds Kılavuz, Geliştirici
+and Denetim.
+
+**Manual install, without Python:** open the macro-free `.xlsx` and save it as `.xlsm`.
+Then import `Sozluk.cls` and `M01…M10.bas`, and paste the Panel and ThisWorkbook code
+(`KURULUM.txt` in the zip). Run *Debug › Compile*, then `Alt+F8 › SifirdanKur`.
+
+Requirements for the tools: Windows, Excel, Python 3.10+ with `pywin32`, and *Trust
+access to the VBA project object model* enabled. `screenshot.py` also needs `pdftoppm`.
+All tools start their **own invisible Excel instance**, and a watchdog answers
+MsgBox/InputBox dialogs, so automation never hangs and never touches your open
+workbooks.
+
+---
+
+## Architecture
+
+```
+src/                       single source of truth, 100 % printable ASCII
+  Sozluk.cls               native dictionary (Collection-backed), no Scripting.Dictionary
+  M01_Ayarlar.bas          constants: layout offsets, Listeler/Rapor/Gecmis/Profiller/Setler
+                           columns, control-point status levels, colour palette, globals
+  M02_Yardimci.bas         BH/Normalize/TR (Turkish-safe), SutunOku (1-row + overflow safe),
+                           DosyaBul/SayfaBul, data types, BaslikDogrula, MaddeKisalt,
+                           AlanTemizle, EkranKilitle/EkranAc
+  M03_Panel.bas            block geometry, ribbon, sticky navigation, cards, add/remove panel
+  M04_Yenile.bas           Yenile (single-pass sampling), menus, DURUM, fixed values,
+                           target map, type column, auto-detection, change & double-click router
+  M05_Eslestirme.bas       two-pass auto-mapping, suggestions, learning profiles, sets
+  M06_Aktarim.bas          staged transfer engine (AktarimPlani), K1–K8 tagging (KEkle),
+                           filter engine, format guard, formula shift, patch, Ön Kontrol
+  M07_Kayit.bas            two-phase undo with fingerprint and backup, Gecmis, Rapor,
+                           batch-aware Tutar Mutabakatı
+  M08_Kurulum.bas          SifirdanKur, PaneliYenidenKur (v33/v34 migration), PanelKur, Tani
+  M09_Kilavuz.bas          accordion guide (Kılavuz) and developer handoff sheet (Geliştirici)
+  M10_Denetim.bas          control-point names, panel scorecard, HAZIRLIK, Denetim sheet
+  Panel.cls                Panel sheet events (Change, SelectionChange, Activate, BeforeDoubleClick)
+  ThisWorkbook.cls         Workbook_Open: restores Excel state after an aborted macro
+tools/                     xlauto.py (COM + dialog watchdog), build, release, export,
+                           test_e2e, screenshot, perf
+docs/                      GitHub Pages download page and screenshots
+```
+
+---
+
+## Developer workflow and CLI
+
+```bash
+python tools/build.py --check                         # ASCII gate only
+python tools/build.py --new dist/AktarimPaneli_v1.0.xlsm
+python tools/build.py --upgrade in.xlsm --out out.xlsm [--no-setup] [--visible] [--src DIR]
+python tools/test_e2e.py [--panel x.xlsm] [--v33 v33.xlsm] [--only-migration]
+python tools/screenshot.py                            # docs/panel_v1.0.png, denetim_v1.0.png, kilavuz_v1.0.png
+python tools/perf.py --rows 200000 --master 300000 --cols 30 --panels 3
+python tools/export.py dist/AktarimPaneli_v1.0.xlsm    # VBA editor edits -> src/, then git diff
+python tools/release.py --version v1.0                 # dist/release/*, SHA256SUMS, page checksums
+```
+
+`build.py` refuses any non-ASCII source, imports the modules, injects the two document
+modules, runs *Debug › Compile* (a compile error fails the build and is printed) and
+runs `SifirdanKur`.
+
+---
+
+## Verification and performance
+
+`tools/test_e2e.py` drives the built workbook through Excel exactly as a user would.
+Cell edits fire the real sheet events, and every dialog is answered and asserted.
+**154 / 154 checks pass**, covering:
+
+- **Mapping and checks:** auto-mapping and profiles; dry run with every K1–K8 finding;
+  live scorecard; tagged Rapor rows; filters.
+- **Transfer and undo:** format guard; formula shift; four-way reconciliation; undo;
+  fingerprint detection; patch with backup restore; gap mode with row insertion.
+- **Panels and batches:** sets; add/remove panels; two-panel batch reconciliation and
+  tamper detection.
+- **UI:** double-click shortcuts; HAZIRLIK; the Denetim sheet.
+- **Migration:** a real v33 workbook, and a real v34 workbook built from the previous
+  commit.
+
+`tools/perf.py`, on a 200 000 × 30 source and a 300 000 × 30 master, 3 panels:
+
+| Step | v1.0 | Previous release (same machine, same run) |
+|---|---:|---:|
+| Yenile (3 panels) | 8.2 s | 7.5 s |
+| Otomatik Eslestir | 0.8 s | 0.6 s |
+| On Kontrol | **5.8 s** | 26.0 s |
+| Aktar (200 000 rows × 30 cols, incl. dialogs) | **14.6 s** | 33.3 s |
+| Geri Al | 3.4 s | 3.6 s |
+
+Reconciliation: FARK 0,00 (TUTUYOR) in both. Timings depend on machine load: run
+both builds back to back when you compare. The On Kontrol and Aktar gains come
+from skipping the format-guard check for text that starts with a letter, inline
+in the hot loops (about 5 million calls fewer per run).
 
 ---
 
 ## Rules for maintainers
 
-These rules come from v33 incidents and are also listed on the Geliştirici sheet:
+1. VBA source must be **100 % printable ASCII** (`build.py` enforces this). Text in cells and shapes goes through `TR("#s#i#g")`; MsgBox text stays ASCII.
+2. Compare with `BH()` / `Normalize()`, never raw `UCase`/`LCase`. On Turkish Windows, `UCase("i")` returns `İ`.
+3. No `Scripting.Dictionary`, `RegExp` or ActiveX: use `Sozluk`, arrays and shapes.
+4. Read big sheets **column by column** with `SutunOku`. It returns 2-D arrays even for one row, and falls back to `.Value2` on overflow error 6. Never use `Application.Transpose`.
+5. Never call `ws.Cells.Clear` on a sheet with dropdowns; use `AlanTemizle`.
+6. Every entry macro pairs `EkranKilitle` with `EkranAc`. Save `Err` before `EkranAc`, because `On Error` resets it.
+7. Layout lives only in `M01_Ayarlar`. If the block layout changes, bump `DUZEN_DEGERI` and teach `M08_Kurulum.BlokOku` the old offsets (see the v34 branch).
+8. A new check is an `KEkle p, n, engelMi, "..."` call in M06. It is tagged automatically, raises the scorecard, and reaches Rapor and Denetim.
+9. After any change, run `build.py` and then `test_e2e.py`. If a fix was made in the VBA editor, run `export.py` and review the diff.
 
-1. The VBA source must be **100 % ASCII**; `build.py` refuses anything else. Text in cells and shapes uses `TR("#s#i")` escapes (`#i #I #s #S #g #G #u #U #o #O #c #C`). MsgBox text stays ASCII.
-2. Compare strings with `BH()` / `Normalize()`, never raw `UCase`/`LCase`. On Turkish Windows, `UCase("i")` returns `İ`.
-3. No `Scripting.Dictionary`, `RegExp` or ActiveX. Use `Sozluk`, `Collection`, arrays and shape buttons.
-4. Read large sheets **column by column** with `SutunOku`. It always returns a 2-D array (a single cell otherwise comes back as a scalar) and falls back to `.Value2` on overflow error 6. Never use `Application.Transpose`.
-5. Never call `ws.Cells.Clear` on a sheet with dropdowns; use `AlanTemizle` on explicit ranges.
-6. Every entry macro pairs `EkranKilitle` with `EkranAc`, including on its error path. `On Error` statements reset `Err`, so save the error before calling `EkranAc`.
-7. Layout changes go in `M01_Ayarlar` only. If the block layout changes, bump `DUZEN_DEGERI` and teach `M08_Kurulum.BlokOku` the old layout so existing panels migrate.
-8. After any change, run `build.py` and then `test_e2e.py`. If a fix was made in the VBA editor, run `export.py` and review the diff.
+---
 
-## Known limitations
+## Limitations and version history
 
-- Duplicate checks work at file/sheet level, not per policy or claim number.
+- Duplicate detection is per file/sheet, not per policy or claim number.
 - Headers must be on row 1. There is no locking, so one user at a time.
-- Green-column detection relies on colour (G > R+12 and G > B+12).
-- Data type is sampled from 300 rows. Filter dropdowns sample 10 000 rows, but filters are applied to all rows.
+- Green (mandatory) detection relies on colour (G > R+12 and G > B+12).
+- Data types are sampled from 300 rows; filter dropdowns from 10 000 rows (filters
+  apply to all rows).
+- ASOP 23 alignment describes supporting evidence, not a compliance certification.
+
+| Version | Highlights |
+|---|---|
+| v33 | Monolithic Module1/2/3 with an analytics add-on |
+| v34 | Modular `src/`, build/test tooling, format guard, fingerprinted undo, patch mode, filters, ~9× faster Yenile |
+| v1.0 | K1–K8 control points with live scorecard and tagged audit rows; Denetim sheet; HAZIRLIK; batch reconciliation; amount, green-cell and fixed-value checks; editable columns grouped with the map moved right; card layout; double-click shortcuts; auto-detected control columns; v33/v34/v35 → v1.0 migration; supersedes the release first published as v35 |

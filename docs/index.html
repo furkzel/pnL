@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Aktarım Paneli v35 — İndir</title>
+<title>Aktarım Paneli v1.0 — İndir</title>
 <meta name="description" content="Aylık hasar dosyalarını birikimli ana dosyalara eşleme ile aktaran Excel aracı. Makrolu, makrosuz ve yalnızca makro paketleri.">
 <style>
   :root {
@@ -63,7 +63,7 @@
 <body>
 <header>
   <div class="wrap">
-    <span class="tag">Sürüm v35 · Excel VBA · açık kaynak</span>
+    <span class="tag">Sürüm v1.0 · ilk kararlı yayın · Excel VBA · açık kaynak</span>
     <h1>Aktarım Paneli</h1>
     <p>Aylık hasar dosyalarını (ödenen, muallak) birikimli ana dosyalara <strong>sütun eşlemesiyle</strong>
        aktarır. Her aktarım öncesinde denetlenir, sonrasında tutar mutabakatı yapılır, kayda geçer ve geri alınabilir.</p>
@@ -81,23 +81,23 @@
     <div class="card rec">
       <span class="badge">1 · Önerilen</span>
       <h3>Hepsi bir arada</h3>
-      <div class="ext">AktarimPaneli_v35.xlsm · ~0.9 MB</div>
+      <div class="ext">AktarimPaneli_v1.0.xlsm · ~0.9 MB</div>
       <p>Çalışma kitabı ve makrolar birlikte. Açın, <em>İçeriği Etkinleştir</em>'e basın, kullanmaya başlayın.</p>
-      <a class="btn" href="https://github.com/furkzel/pnL/releases/download/v35/AktarimPaneli_v35.xlsm">⬇ .xlsm indir</a>
+      <a class="btn" href="https://github.com/furkzel/pnL/releases/download/v1.0/AktarimPaneli_v1.0.xlsm">⬇ .xlsm indir</a>
     </div>
     <div class="card">
       <span class="badge alt">2 · Makrosuz</span>
       <h3>Yalnızca Excel dosyası</h3>
-      <div class="ext">AktarimPaneli_v35_makrosuz.xlsx · ~0.3 MB</div>
+      <div class="ext">AktarimPaneli_v1.0_makrosuz.xlsx · ~0.3 MB</div>
       <p>Panel, Kılavuz ve kayıt sayfaları hazır, içinde hiç kod yok. Makro filtrelerine takılmaz.</p>
-      <a class="btn ghost" href="https://github.com/furkzel/pnL/releases/download/v35/AktarimPaneli_v35_makrosuz.xlsx">⬇ .xlsx indir</a>
+      <a class="btn ghost" href="https://github.com/furkzel/pnL/releases/download/v1.0/AktarimPaneli_v1.0_makrosuz.xlsx">⬇ .xlsx indir</a>
     </div>
     <div class="card">
       <span class="badge alt">3 · Yalnızca makrolar</span>
       <h3>VBA modülleri</h3>
-      <div class="ext">AktarimPaneli_v35_makrolar.zip · ~0.1 MB</div>
-      <p>9 modül, 1 sınıf ve sayfa kodları, düz metin hâlinde. İçe aktarmadan önce okuyabilirsiniz. Kurulum notu (KURULUM.txt) zipin içinde.</p>
-      <a class="btn ghost" href="https://github.com/furkzel/pnL/releases/download/v35/AktarimPaneli_v35_makrolar.zip">⬇ .zip indir</a>
+      <div class="ext">AktarimPaneli_v1.0_makrolar.zip · ~0.1 MB</div>
+      <p>10 modül, 1 sınıf ve sayfa kodları, düz metin hâlinde. İçe aktarmadan önce okuyabilirsiniz. Kurulum notu (KURULUM.txt) zipin içinde.</p>
+      <a class="btn ghost" href="https://github.com/furkzel/pnL/releases/download/v1.0/AktarimPaneli_v1.0_makrolar.zip">⬇ .zip indir</a>
     </div>
   </div>
   <p style="margin-top:14px">Tüm sürümler: <a href="https://github.com/furkzel/pnL/releases">GitHub Releases</a> ·
@@ -105,7 +105,49 @@
 </section>
 
 <section>
-  <img class="shot" src="panel_v34.png" alt="Aktarım Paneli: üstte 1-2-3-4 iş akışı şeridi, altta eşleştirme tablosu">
+  <img class="shot" src="panel_v1.0.png" alt="Aktarım Paneli v1.0: 1-2-3-4 iş akışı şeridi, HAZIRLIK göstergesi, ayar kartları, K1–K8 kontrol karnesi ve eşleştirme tablosu">
+</section>
+
+<section>
+  <h2>v1.0 ile gelenler</h2>
+  <div class="grid">
+    <div class="card"><h3>1 → 2 → 3 → 4 iş akışı</h3>
+      <p>Şerit numaralı çalışır: <strong>1 Yenile</strong>, <strong>2 Otomatik Eşleştir</strong>, <strong>3 Ön Kontrol</strong>, <strong>4 Aktar</strong>. Hangi adımda olduğunuz hep görünür.</p></div>
+    <div class="card"><h3>Canlı K1–K8 karnesi</h3>
+      <p>Her panelde sekiz aktüerya kontrol noktası (ASOP 23 ile uyumlu) ✓ / ! / ✕ olarak anlık görünür. Bulgular Rapor'a eksiksiz yazılır.</p></div>
+    <div class="card"><h3>Denetim sayfası</h3>
+      <p>Yönetici özeti: aktarım sayısı, geri alınanlar, aktarılan satır ve tutar, mutabakat oranı, K1–K8 istatistiği, son 15 aktarım.</p></div>
+    <div class="card"><h3>HAZIRLIK göstergesi</h3>
+      <p>Şeritte tek bakışta kaç panelin hazır, kaçının dikkatli, kaçının engelli olduğu. Tıklayınca panel panel döküm.</p></div>
+    <div class="card"><h3>Çift tıklama kısayolları</h3>
+      <p>DAHİL aç/kapat, önerilen eşleşmeyi onayla, İŞLEM seç, harita sütunundan tek hamlede sabit değer satırı aç.</p></div>
+    <div class="card"><h3>Biçim ve baştaki sıfır koruması</h3>
+      <p><code>0004821</code> 4821'e, 16 haneli numara <code>1,23E+18</code>'e, <code>=...</code> metni formüle dönüşmez; olduğu gibi (metin) yazılır.</p></div>
+    <div class="card"><h3>4'lü tutar mutabakatı</h3>
+      <p>Kaynak toplamı, yazılan toplam, hedefin önceki ve yeni toplamı birbirini tutmalı. FARK 0,00 değilse Rapor kırmızı uyarır.</p></div>
+    <div class="card"><h3>İki aşamalı geri alma</h3>
+      <p>Yazılan aralıkların parmak izi saklanır; sonradan elle değiştirilmiş hücreler geri almadan önce yakalanır, ezilen eski değerler yedekten döner.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>8 aktüerya kontrol noktası</h2>
+  <p>Her aktarım yazılmadan önce sekiz kontrol noktasından geçer. Sonuç her panelin <strong>KONTROL NOKTALARI</strong> kartında
+     (✓ geçti · ! dikkat · ✕ engel) ve Rapor'daki <code>KONTROL NOKTASI</code> sütununda görünür; yönetici özeti <strong>Denetim</strong> sayfasındadır.</p>
+  <div class="card">
+    <table>
+      <tr><th>Nokta</th><th>Ne denetlenir</th></tr>
+      <tr><td><strong>K1</strong> Dosya, başlık &amp; hedef</td><td>Dosya/sayfa erişimi, salt okunur kilit, başlık yeri ve adı, iki kaynağın aynı hedefe yazması, hedef aralık</td></tr>
+      <tr><td><strong>K2</strong> Mükerrer aktarım</td><td>Aynı aylık dosya bu ana dosyada zaten etkin mi</td></tr>
+      <tr><td><strong>K3</strong> Son satır &amp; kuyruk</td><td>Alttaki genel toplam / not satırları, içerik önizlemesiyle</td></tr>
+      <tr><td><strong>K4</strong> Zorunlu (yeşil) sütun</td><td>Eşleşmeyen yeşil sütun ve yeşil sütunda boş hücre</td></tr>
+      <tr><td><strong>K5</strong> Veri tipi &amp; sabit değer</td><td>Kaynak/hedef tip çatışması, sabit değerin hedef tipiyle uyumu</td></tr>
+      <tr><td><strong>K6</strong> Biçim &amp; kod koruması</td><td>Baştaki sıfır, 16+ haneli numara, formül gibi metin, ##### tarih taşması</td></tr>
+      <tr><td><strong>K7</strong> Tutar &amp; mutabakat</td><td>Sayı olmayan / boş / eksi tutar ve 4'lü mutabakat (FARK = 0,00)</td></tr>
+      <tr><td><strong>K8</strong> Hasar &amp; ihbar tarihi</td><td>İhbar &lt; hasar, boş, bozuk ve metin tarih</td></tr>
+    </table>
+  </div>
+  <img class="shot" style="margin-top:16px" src="denetim_v1.0.png" alt="Denetim sayfası: KPI kartları, K1–K8 istatistiği ve son aktarımlar">
 </section>
 
 <section id="ayri">
@@ -113,7 +155,7 @@
   <div class="two">
     <div class="card">
       <ol>
-        <li><code>AktarimPaneli_v35_makrosuz.xlsx</code> dosyasını açın. <em>Dosya › Farklı Kaydet › Excel Makro Etkin Çalışma Kitabı (*.xlsm)</em>.</li>
+        <li><code>AktarimPaneli_v1.0_makrosuz.xlsx</code> dosyasını açın. <em>Dosya › Farklı Kaydet › Excel Makro Etkin Çalışma Kitabı (*.xlsm)</em>.</li>
         <li><kbd>Alt</kbd>+<kbd>F11</kbd> ile VBA düzenleyicisini açın. <em>File › Import File…</em> ile zipteki
             <code>Sozluk.cls</code> ve <code>M01_…</code> – <code>M09_…</code> dosyalarını içe aktarın.</li>
         <li>Sol panelde <strong>(Panel)</strong> satırına çift tıklayın, <code>Panel_sayfa_kodu.txt</code> içeriğini yapıştırın.</li>
@@ -136,13 +178,13 @@
 <section>
   <h2>Dosyaları doğrulayın (SHA-256)</h2>
   <p>İndirdiğiniz dosyanın değiştirilmediğini PowerShell ile kontrol edin; çıkan değer aşağıdakiyle aynı olmalı:</p>
-  <pre><code>Get-FileHash .\AktarimPaneli_v35.xlsm -Algorithm SHA256</code></pre>
+  <pre><code>Get-FileHash .\AktarimPaneli_v1.0.xlsm -Algorithm SHA256</code></pre>
   <div class="card" style="margin-top:12px">
     <table>
       <tr><th>Dosya</th><th>SHA-256</th><th></th></tr>
-      <tr><td>AktarimPaneli_v35.xlsm</td><td class="hash">3b038abb846de5eddb091bf7dddf896265390b927dfb122a103c72a6734f8eba</td><td><button class="copy">kopyala</button></td></tr>
-      <tr><td>AktarimPaneli_v35_makrosuz.xlsx</td><td class="hash">fc47711b49371d4acff1290d14057a0a336663d16888fa2451934cbcc7e074e7</td><td><button class="copy">kopyala</button></td></tr>
-      <tr><td>AktarimPaneli_v35_makrolar.zip</td><td class="hash">a57c7646bac736b482ae312e257e08864ce2a2f7b9c4d95e6e583def96413da6</td><td><button class="copy">kopyala</button></td></tr>
+      <tr><td>AktarimPaneli_v1.0.xlsm</td><td class="hash">5a0fa475ec83f2123686bfff4573f17fd2575e3c696cc38f6c41fe7198542795</td><td><button class="copy">kopyala</button></td></tr>
+      <tr><td>AktarimPaneli_v1.0_makrosuz.xlsx</td><td class="hash">b28d08a0159c86f3c2d846a71858d5f6299854030ac08c079ea477966878cf2b</td><td><button class="copy">kopyala</button></td></tr>
+      <tr><td>AktarimPaneli_v1.0_makrolar.zip</td><td class="hash">4ba04a9a35cf1ecf65071b9a6a8d907b1d3eebee9df5e5f0d66ed764ccdb69fd</td><td><button class="copy">kopyala</button></td></tr>
     </table>
   </div>
 </section>
@@ -172,7 +214,7 @@
 </main>
 
 <footer>
-  <div class="wrap">Aktarım Paneli v35 · Kullanım kılavuzu çalışma kitabının içindeki <strong>Kılavuz</strong> sayfasındadır ·
+  <div class="wrap">Aktarım Paneli v1.0 · Kullanım kılavuzu çalışma kitabının içindeki <strong>Kılavuz</strong> sayfasındadır ·
     Geliştirici notları: <a href="https://github.com/furkzel/pnL#readme">README</a></div>
 </footer>
 

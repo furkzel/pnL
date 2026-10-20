@@ -1,5 +1,5 @@
 ' ============================================================
-' AKTARIM PANELI  v34  -  "ThisWorkbook" KOD SAYFASI
+' AKTARIM PANELI  v1.0  -  "ThisWorkbook" KOD SAYFASI
 '
 ' Bu dosya bir sinif modulu OLARAK ICE AKTARILMAZ. tools\build.py
 ' icerigi ThisWorkbook'un kod sayfasina yazar. Elle kurulumda: VBA

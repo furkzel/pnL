@@ -1,7 +1,7 @@
 """
 release.py - build the three download packages for a release.
 
-  python tools/release.py [--version v35]
+  python tools/release.py [--version v1.0]
 
 Output in dist/release/:
   AktarimPaneli_<v>.xlsm          workbook + macros (ready to use)
@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -38,7 +39,7 @@ ayri indirilir, sizin bilgisayarinizda birlestirilir.
 2) Alt+F11 ile VBA editorunu acin.
    File > Import File... ile bu klasordeki dosyalari TEK TEK ice aktarin:
        Sozluk.cls
-       M01_Ayarlar.bas ... M09_Kilavuz.bas  (9 dosya)
+       M01_Ayarlar.bas ... M10_Denetim.bas  (10 dosya)
 
 3) Sol panelde "Panel" sayfasinin kod sayfasina (parantez icinde "Panel"
    yazan satir) cift tiklayin. Panel_sayfa_kodu.txt dosyasini Not
@@ -69,13 +70,28 @@ def sha256(p: Path) -> str:
     return h.hexdigest()
 
 
+TRACES = (b"fozel", b"furkan", b"furkzel")
+
+
+def audit(p: Path) -> list[str]:
+    """Search every member of an OOXML package for the builder's identity."""
+    bad = []
+    with zipfile.ZipFile(p) as z:
+        for n in z.namelist():
+            low = z.read(n).lower()
+            for t in TRACES:
+                if t in low:
+                    bad.append(f"{p.name}: {n} contains {t.decode()}")
+    return bad
+
+
 def crlf(text: str) -> bytes:
     return text.replace("\r\n", "\n").replace("\n", "\r\n").encode("ascii")
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--version", default="v35")
+    ap.add_argument("--version", default="v1.0")
     a = ap.parse_args(argv)
     v = a.version
     out = xlauto.ROOT / "dist" / "release"
@@ -93,8 +109,10 @@ def main(argv=None) -> int:
         xlsx.unlink()
     with xlauto.ExcelSession() as s:
         wb = s.xl.Workbooks.Open(str(xlsm))
+        xlauto.scrub_personal_info(wb)
         wb.SaveAs(str(xlsx), FileFormat=51)
         wb.Close(False)
+    xlauto.strip_package_identity(xlsx)
     print("saved:", xlsx)
 
     # 3) macros only
@@ -107,9 +125,30 @@ def main(argv=None) -> int:
         z.writestr("makrolar/KURULUM.txt", crlf(KURULUM.format(v=v)))
     print("saved:", zp)
 
-    sums = "".join(f"{sha256(p)}  {p.name}\n" for p in (xlsm, xlsx, zp))
-    (out / "SHA256SUMS.txt").write_text(sums, encoding="ascii", newline="\n")
+    # Distribution files must be free of local identity traces
+    bad = audit(xlsm) + audit(xlsx)
+    for src_f in sorted(src.glob("*")):
+        low = src_f.read_bytes().lower()
+        bad += [f"{src_f.name} contains {t.decode()}" for t in TRACES if t in low]
+    if bad:
+        print("IDENTITY TRACES FOUND:")
+        print(chr(10).join(bad))
+        return 1
+    print("identity audit: clean")
+
+    sums = "".join(f"{sha256(p)}  {p.name}" + chr(10) for p in (xlsm, xlsx, zp))
+    (out / "SHA256SUMS.txt").write_text(sums, encoding="ascii", newline=chr(10))
     print(sums)
+
+    # Keep the download page's checksum table in sync with the packages
+    page = xlauto.ROOT / "docs" / "index.html"
+    if page.exists():
+        html = page.read_text(encoding="utf-8")
+        for f in (xlsm, xlsx, zp):
+            html = re.sub(r"(<td>" + re.escape(f.name) + r"</td><td class=\"hash\">)[0-9a-f]{64}",
+                          lambda m, h=sha256(f): m.group(1) + h, html)
+        page.write_text(html, encoding="utf-8")
+        print("updated checksums in", page)
     return 0
 
 

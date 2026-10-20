@@ -2,7 +2,7 @@ Attribute VB_Name = "M05_Eslestirme"
 Option Explicit
 
 ' ============================================================
-' AKTARIM PANELI  v34  -  M05_Eslestirme
+' AKTARIM PANELI  v1.0  -  M05_Eslestirme
 '
 '   OtomatikEslestir : 1. tur birebir ad (+ ayni adli sutunlarda SIRA),
 '                      2. tur Levenshtein benzerligi (>= %70) -> ONERI

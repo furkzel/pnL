@@ -39,7 +39,7 @@ def main():
     ap.add_argument("--master", type=int, default=300000)
     ap.add_argument("--cols", type=int, default=30)
     ap.add_argument("--panels", type=int, default=3)
-    ap.add_argument("--panel", default=str(xlauto.ROOT / "dist" / "AktarimPaneli_v34.xlsm"))
+    ap.add_argument("--panel", default=str(xlauto.ROOT / "dist" / "AktarimPaneli_v1.0.xlsm"))
     a = ap.parse_args()
 
     work = Path(tempfile.mkdtemp(prefix="apb_perf_"))

@@ -2,7 +2,7 @@ Attribute VB_Name = "M06_Aktarim"
 Option Explicit
 
 ' ============================================================
-' AKTARIM PANELI  v34  -  M06_Aktarim  (AKTARIM MOTORU)
+' AKTARIM PANELI  v1.0  -  M06_Aktarim  (AKTARIM MOTORU)
 '
 ' GIRIS MAKROLARI
 '   Aktar         : "Bu paneli aktar = Evet" olan panelleri SIRAYLA aktarir
@@ -122,6 +122,9 @@ Private Type AktarimPlani
     engelSay As Long
     dikkat As String
     dikkatSay As Long
+
+    ' Aktueryal kontrol noktalari K1..K8 (M10_Denetim): KD_* durumlari
+    kDurum() As String
 End Type
 
 
@@ -149,7 +152,7 @@ Public Sub Aktar()
             If DahilMi(pnl, k) Then
                 secilenSayi = secilenSayi + 1
                 secili(secilenSayi) = k
-                liste = liste & "  " & secilenSayi & ") PANEL " & k & " : " & _
+                liste = liste & "  " & secilenSayi & ") PANEL " & k & "  " & HazirlikEtiketi(k) & vbNewLine & "       " & _
                         AyarMetni(pnl, k, SATIR_KAYNAK_DOSYA) & " / " & AyarMetni(pnl, k, SATIR_KAYNAK_SAYFA) & vbNewLine & _
                         "       -> " & AyarMetni(pnl, k, SATIR_HEDEF_DOSYA) & " / " & _
                         AyarMetni(pnl, k, SATIR_HEDEF_SAYFA) & vbNewLine
@@ -200,6 +203,8 @@ Public Sub Aktar()
         End Select
     Next i
 
+    If basarili > 0 Then DenetimSessiz
+
     MsgBox "SIRALI AKTARIM BITTI" & vbNewLine & vbNewLine & _
            "Parti no           : " & partiNo & vbNewLine & _
            "Secilen panel      : " & secilenSayi & vbNewLine & _
@@ -208,7 +213,8 @@ Public Sub Aktar()
            IIf(g_MutabakatOzet = "", "   (aktarim yok)" & vbNewLine, Sigdir(g_MutabakatOzet, 500)) & vbNewLine & _
            "HATIRLATMA: Ana dosyayi SIMDI kaydet, sonra bu paneli de kaydet." & vbNewLine & vbNewLine & _
            "Hepsini birden geri almak icin 'Geri Al' calistirip" & vbNewLine & _
-           "'parti' secenegini sec.", vbInformation, "Aktarim"
+           "'parti' secenegini sec." & vbNewLine & vbNewLine & _
+           "Yonetici ozeti: Denetim sayfasi (guncellendi).", vbInformation, "Aktarim"
 
 End Sub
 
@@ -223,7 +229,7 @@ Public Sub AktarSecili()
     Set pnl = PanelSayfasi()
     If Not PanelHazirMi(pnl) Then Exit Sub
     g_MutabakatOzet = ""
-    AktarCalistir AktifBlok(), True, YeniPartiNo(), 1, 1
+    If AktarCalistir(AktifBlok(), True, YeniPartiNo(), 1, 1) = asTamam Then DenetimSessiz
 
 End Sub
 
@@ -245,6 +251,7 @@ Public Sub OnKontrol()
 
     p.k = AktifBlok()
     p.kuru = True
+    KBaslat p
     p.toplam = 1
     p.sira = 1
     g_OkumaUyarisi = ""
@@ -257,18 +264,20 @@ Public Sub OnKontrol()
         If p.engel = "" Then
             ' Mukerrer aktarim: AktarIc'taki soru, kuru calismada DIKKAT olur
             mukerrer = OncekiAktarimlar(p.kaynakWb.Name, CStr(p.kaynakWs.Name), p.hedefWb.Name, CStr(p.hedefWs.Name))
+            KTamam p, 2
             If mukerrer <> "" Then
-                MaddeEkle p.dikkat, p.dikkatSay, "MUKERRER AKTARIM UYARISI: bu kaynak ayni ana dosyaya daha once " & _
+                KEkle p, 2, False, "MUKERRER AKTARIM UYARISI: bu kaynak ayni ana dosyaya daha once " & _
                           "aktarilmis ve geri alinmamis; tekrar aktarilirsa kayitlar IKI KEZ bulunur: " & TekSatir(mukerrer)
             End If
             SonSatirBelirle p
+            KTamam p, 3
             VeriOku p
             SatirSec p
             If p.n > 0 Then
                 HedefAralikBelirle p
                 EkDikkat p
             Else
-                MaddeEkle p.engel, p.engelSay, "Filtreye uyan (dolu) satir yok."
+                KEkle p, 3, True, "Filtreye uyan (dolu) satir yok."
             End If
         End If
     End If
@@ -300,7 +309,8 @@ Sonuc:
         End If
         ozet = ozet & vbNewLine
     End If
-    If p.supheliNot <> "" Then ozet = ozet & vbNewLine & "SUPHELI ALT SATIRLAR: " & Left$(p.supheliNot, 260) & vbNewLine
+    If p.supheliNot <> "" Then ozet = ozet & vbNewLine & "SUPHELI ALT SATIRLAR: " & Left$(p.supheliNot, 220) & vbNewLine
+    ozet = ozet & vbNewLine & "KONTROL NOKTALARI:" & vbNewLine & KarneSatiri(p.kDurum) & vbNewLine
 
     If hata <> "" Then
         ozet = ozet & vbNewLine & "KONTROL SIRASINDA HATA: " & hata & vbNewLine
@@ -313,7 +323,7 @@ Sonuc:
     If p.dikkat <> "" Then
         ' Supheli kuyruk yukarida ayrica gosterildi; ekranda tekrar edilmez
         ' (Rapor'a yine tam yazilir).
-        ekranDikkat = MaddeCikar(p.dikkat, "- KAYNAK SON SATIR SUPHELI")
+        ekranDikkat = MaddeCikar(p.dikkat, "- [K3] KAYNAK SON SATIR SUPHELI")
         If ekranDikkat <> "" Then
             metin = MaddeKisalt(ekranDikkat, MSGBOX_SINIR - Len(ozet) - 110)
             If metin <> ekranDikkat Then kisaltildi = True
@@ -327,10 +337,14 @@ Sonuc:
     ' Rapor: once ozet satiri, sonra HER madde kendi satirinda, kisaltilmadan
     raporIlk = OlayYaz("KONTROL", p.k, 0, 0, "On kontrol: " & p.n & " satir, " & p.engelSay & " ENGEL, " & _
                        p.dikkatSay & " DIKKAT" & IIf(p.supheliNot <> "", ". Supheli alt satirlar: " & p.supheliNot, ""), _
-                       IIf(p.engel <> "", "Engel var", IIf(p.dikkat <> "", "Dikkat maddeleri var", "Sorun yok")), _
+                       TekSatir(KarneSatiri(p.kDurum)), _
                        DosyaAdiGuvenli(p.kaynakWb), SayfaAdiGuvenli(p.kaynakWs), DosyaAdiGuvenli(p.hedefWb), SayfaAdiGuvenli(p.hedefWs))
-    MaddeleriRaporaYaz p, p.engel, "ENGEL"
-    MaddeleriRaporaYaz p, p.dikkat, "DIKKAT"
+    MaddeleriRaporaYaz p, p.engel, "KONTROL", "ENGEL", KD_ENGEL
+    MaddeleriRaporaYaz p, p.dikkat, "KONTROL", "DIKKAT", KD_DIKKAT
+    If Not p.pnl Is Nothing Then
+        KarneYaz p.pnl, p.k, p.kDurum, TR("3 #On Kontrol: ") & Format$(Now, "dd.mm hh:nn") & _
+                 IIf(p.n > 0, "  " & ChrW(183) & "  " & SayiMetni(p.n) & TR(" sat#ir"), "")
+    End If
 
     If kisaltildi Then
         ozet = ozet & vbNewLine & "Maddelerin tamami Rapor sayfasinda. Rapor simdi acilsin mi?"
@@ -360,11 +374,12 @@ End Function
 
 ' Madde listesinin her maddesini Rapor'a ayri bir KONTROL satiri olarak,
 ' KISALTMADAN yazar (MsgBox'a sigmayan ayrinti kaybolmasin).
-Private Sub MaddeleriRaporaYaz(ByRef p As AktarimPlani, ByVal liste As String, ByVal tur As String)
+Private Sub MaddeleriRaporaYaz(ByRef p As AktarimPlani, ByVal liste As String, ByVal olay As String, _
+                               ByVal karar As String, ByVal seviye As String)
 
     Dim parcalar() As String
-    Dim i As Long
-    Dim m As String
+    Dim i As Long, kapa As Long
+    Dim m As String, kod As String
 
     If liste = "" Then Exit Sub
     parcalar = Split(liste, vbNewLine)
@@ -372,11 +387,57 @@ Private Sub MaddeleriRaporaYaz(ByRef p As AktarimPlani, ByVal liste As String, B
         m = Trim$(parcalar(i))
         If Left$(m, 2) = "- " Then m = Mid$(m, 3)
         If m <> "" Then
-            OlayYaz "KONTROL", p.k, 0, 0, m, tur, DosyaAdiGuvenli(p.kaynakWb), SayfaAdiGuvenli(p.kaynakWs), _
-                    DosyaAdiGuvenli(p.hedefWb), SayfaAdiGuvenli(p.hedefWs)
+            kod = ""
+            If Left$(m, 2) = "[K" Then
+                kapa = InStr(m, "]")
+                If kapa > 2 Then kod = Mid$(m, 2, kapa - 2) & " " & seviye
+            End If
+            OlayYaz olay, p.k, p.partiNo, 0, m, karar, DosyaAdiGuvenli(p.kaynakWb), SayfaAdiGuvenli(p.kaynakWs), _
+                    DosyaAdiGuvenli(p.hedefWb), SayfaAdiGuvenli(p.hedefWs), kod
         End If
     Next i
 
+End Sub
+
+
+' ------------------------------------------------------------
+'  KONTROL NOKTASI DURUMLARI  (K1..K8, bkz. M10_Denetim)
+' ------------------------------------------------------------
+Private Sub KBaslat(ByRef p As AktarimPlani)
+    Dim n As Long
+    ReDim p.kDurum(1 To K_SAYI)
+    For n = 1 To K_SAYI
+        p.kDurum(n) = KD_BEKLIYOR
+    Next n
+End Sub
+
+
+' "[Kn] metin" maddesini ENGEL ya da DIKKAT listesine ekler, durumu yukseltir
+Private Sub KEkle(ByRef p As AktarimPlani, ByVal n As Long, ByVal engelMi As Boolean, ByVal metin As String)
+    If engelMi Then
+        MaddeEkle p.engel, p.engelSay, "[K" & n & "] " & metin
+        KSeviye p, n, KD_ENGEL
+    Else
+        MaddeEkle p.dikkat, p.dikkatSay, "[K" & n & "] " & metin
+        KSeviye p, n, KD_DIKKAT
+    End If
+End Sub
+
+
+Private Sub KSeviye(ByRef p As AktarimPlani, ByVal n As Long, ByVal d As String)
+    If KSira(d) > KSira(p.kDurum(n)) Then p.kDurum(n) = d
+End Sub
+
+
+' Kontrol calisti ve sorun bulmadi (daha once DIKKAT/ENGEL/YOK olduysa degismez)
+Private Sub KTamam(ByRef p As AktarimPlani, ByVal n As Long)
+    If p.kDurum(n) = KD_BEKLIYOR Then p.kDurum(n) = KD_OK
+End Sub
+
+
+' Kontrol bu aktarimda uygulanmaz (or. tutar sutunu secilmemis)
+Private Sub KYok(ByRef p As AktarimPlani, ByVal n As Long)
+    If p.kDurum(n) = KD_BEKLIYOR Then p.kDurum(n) = KD_YOK
 End Sub
 
 
@@ -427,6 +488,7 @@ Private Function AktarIc(ByVal k As Long, ByVal sadeceIsaretli As Boolean, _
     p.sira = sira
     p.toplam = toplam
     g_OkumaUyarisi = ""
+    KBaslat p
 
     On Error GoTo Hata
 
@@ -453,19 +515,28 @@ Private Function AktarIc(ByVal k As Long, ByVal sadeceIsaretli As Boolean, _
             OlayYaz "UYARI", k, partiNo, 0, "Mukerrer aktarim uyarisi, onceki aktarimlar: " & TekSatir(mukerrer), karar, _
                     p.kaynakWb.Name, CStr(p.kaynakWs.Name), p.hedefWb.Name, CStr(p.hedefWs.Name)
             If cevap <> vbYes Then
+                KSeviye p, 2, KD_DIKKAT
+                KarneYaz p.pnl, p.k, p.kDurum, TR("4 AKTAR iptal: m#ukerrer aktar#im  (") & Format$(Now, "dd.mm hh:nn") & ")"
                 AktarIc = asIptal
                 Exit Function
             End If
+            KEkle p, 2, False, "MUKERRER AKTARIM: bu kaynak daha once aktarilmis ve geri alinmamis; kullanici " & _
+                  "yine de devam etti. Onceki: " & TekSatir(mukerrer)
         End If
+        KTamam p, 2
+    Else
+        KYok p, 2
     End If
 
     ' ============ 3. KAYNAK SON SATIR ============
     If Not SonSatirBelirle(p) Then
+        KarneYaz p.pnl, p.k, p.kDurum, TR("4 AKTAR iptal: son sat#ir sorusu  (") & Format$(Now, "dd.mm hh:nn") & ")"
         AktarIc = asIptal
         Exit Function
     End If
+    KTamam p, 3
     If p.sonSatir < 2 Then
-        MaddeEkle p.engel, p.engelSay, "Kaynak sayfada aktarilacak veri yok."
+        KEkle p, 3, True, "Kaynak sayfada aktarilacak veri yok."
         EngelBildir p
         Exit Function
     End If
@@ -476,7 +547,7 @@ Private Function AktarIc(ByVal k As Long, ByVal sadeceIsaretli As Boolean, _
     SatirSec p
     DurumCubugu ""
     If p.n = 0 Then
-        MaddeEkle p.engel, p.engelSay, "Filtreye uyan (dolu) satir yok. Filtre: " & p.filtreMetni
+        KEkle p, 3, True, "Filtreye uyan (dolu) satir yok. Filtre: " & p.filtreMetni
         EngelBildir p
         Exit Function
     End If
@@ -493,6 +564,7 @@ Private Function AktarIc(ByVal k As Long, ByVal sadeceIsaretli As Boolean, _
 
     ' ============ 7. ONAY ============
     If Not OnayAl(p) Then
+        KarneYaz p.pnl, p.k, p.kDurum, TR("4 AKTAR: onay ekran#inda vazge#cildi  (") & Format$(Now, "dd.mm hh:nn") & ")"
         AktarIc = asIptal
         Exit Function
     End If
@@ -544,7 +616,7 @@ Private Function PlanHazirla(ByRef p As AktarimPlani) As Boolean
     Set p.hedefWs = SayfaBul(p.hedefWb, Ayar(pnl, p.k, SATIR_HEDEF_SAYFA).Value)
 
     If p.kaynakWs Is Nothing Or p.hedefWs Is Nothing Then
-        MaddeEkle p.engel, p.engelSay, "Kaynak veya hedef dosya/sayfa bulunamadi. Secimleri kontrol edip 'YENILE' calistir."
+        KEkle p, 1, True, "Kaynak veya hedef dosya/sayfa bulunamadi. Secimleri kontrol edip 'YENILE' calistir."
         Exit Function
     End If
 
@@ -553,10 +625,10 @@ Private Function PlanHazirla(ByRef p As AktarimPlani) As Boolean
     p.mod = YazimModuOku(Ayar(pnl, p.k, SATIR_YAZIM).Value)
 
     If p.hedefWb.ReadOnly And Not p.kuru Then
-        MaddeEkle p.engel, p.engelSay, "ANA DOSYA SALT OKUNUR ACIK (" & p.hedefWb.Name & "). Muhtemelen baska biri " & _
+        KEkle p, 1, True, "ANA DOSYA SALT OKUNUR ACIK (" & p.hedefWb.Name & "). Muhtemelen baska biri " & _
                   "acik tutuyor; yazilanlar kaydedilemez."
     ElseIf p.hedefWb.ReadOnly Then
-        MaddeEkle p.dikkat, p.dikkatSay, "Ana dosya SALT OKUNUR acik; bu haliyle aktarim yapilamaz."
+        KEkle p, 1, False, "Ana dosya SALT OKUNUR acik; bu haliyle aktarim yapilamaz."
     End If
 
     ' --- Panelden eslesmeleri oku ---
@@ -620,16 +692,16 @@ Private Function PlanHazirla(ByRef p As AktarimPlani) As Boolean
         For i = SABIT_ILK To SABIT_SON
             If Trim$(GuvenliMetin(pnl.Cells(i, c + OFS_SABIT_SUTUN).Value)) = "" Then
                 If Trim$(GuvenliMetin(pnl.Cells(i, c + OFS_SABIT_DEGER).Value)) <> "" Then
-                    MaddeEkle p.engel, p.engelSay, "Sabit deger satiri " & (i - SABIT_ILK + 1) & _
+                    KEkle p, 5, True, "Sabit deger satiri " & (i - SABIT_ILK + 1) & _
                               ": deger yazilmis ama ana dosya SUTUNU secilmemis."
                 End If
             Else
                 sabitNo = SutunNo(pnl.Cells(i, c + OFS_SABIT_SUTUN).Value)
                 If sabitNo = 0 Then
-                    MaddeEkle p.engel, p.engelSay, "Sabit deger satiri " & (i - SABIT_ILK + 1) & _
+                    KEkle p, 5, True, "Sabit deger satiri " & (i - SABIT_ILK + 1) & _
                               ": ana dosya sutunu okunamadi. Menuden yeniden sec."
                 ElseIf Trim$(GuvenliMetin(pnl.Cells(i, c + OFS_SABIT_DEGER).Value)) = "" Then
-                    MaddeEkle p.engel, p.engelSay, "Sabit deger satiri " & (i - SABIT_ILK + 1) & " (" & _
+                    KEkle p, 5, True, "Sabit deger satiri " & (i - SABIT_ILK + 1) & " (" & _
                               SutunAdi(pnl.Cells(i, c + OFS_SABIT_SUTUN).Value) & "): DEGER bos."
                 Else
                     p.adet = p.adet + 1
@@ -646,9 +718,9 @@ Private Function PlanHazirla(ByRef p As AktarimPlani) As Boolean
 
     If p.gercekAdet = 0 Then
         If p.sadeceIsaretli Then
-            MaddeEkle p.engel, p.engelSay, "ISLEM sutununda SEC isaretli eslesme yok."
+            KEkle p, 1, True, "ISLEM sutununda SEC isaretli eslesme yok."
         Else
-            MaddeEkle p.engel, p.engelSay, "Hic eslesme yok."
+            KEkle p, 1, True, "Hic eslesme yok."
         End If
         PlanHazirla = True
         Exit Function
@@ -660,13 +732,13 @@ Private Function PlanHazirla(ByRef p As AktarimPlani) As Boolean
             eskiNo = p.kaynakNo(j)
             durum = BaslikDogrula(p.kaynakWs, p.kaynakNo(j), p.kaynakAdlari(j))
             If durum = bdYerDegisti Then
-                MaddeEkle p.dikkat, p.dikkatSay, "Aylik dosyada '" & p.kaynakAdlari(j) & "' " & SutunHarfi(eskiNo) & _
+                KEkle p, 1, False, "Aylik dosyada '" & p.kaynakAdlari(j) & "' " & SutunHarfi(eskiNo) & _
                           " yerine " & SutunHarfi(p.kaynakNo(j)) & " sutununda; oradan okunacak."
             ElseIf durum = bdYok Then
-                MaddeEkle p.engel, p.engelSay, "Aylik dosyada '" & p.kaynakAdlari(j) & "' sutunu yok (" & _
+                KEkle p, 1, True, "Aylik dosyada '" & p.kaynakAdlari(j) & "' sutunu yok (" & _
                           SutunHarfi(eskiNo) & " sutununun basligi degismis). 'YENILE' calistir."
             ElseIf durum = bdBelirsiz Then
-                MaddeEkle p.engel, p.engelSay, "Aylik dosyada '" & p.kaynakAdlari(j) & "' adiyla birden fazla" & _
+                KEkle p, 1, True, "Aylik dosyada '" & p.kaynakAdlari(j) & "' adiyla birden fazla" & _
                           " sutun var ve hicbiri beklenen yerde degil. 'YENILE' calistir."
             End If
         End If
@@ -674,13 +746,13 @@ Private Function PlanHazirla(ByRef p As AktarimPlani) As Boolean
         eskiNo = p.hedefNo(j)
         durum = BaslikDogrula(p.hedefWs, p.hedefNo(j), p.hedefAdlari(j))
         If durum = bdYerDegisti Then
-            MaddeEkle p.dikkat, p.dikkatSay, "Ana dosyada '" & p.hedefAdlari(j) & "' " & SutunHarfi(eskiNo) & _
+            KEkle p, 1, False, "Ana dosyada '" & p.hedefAdlari(j) & "' " & SutunHarfi(eskiNo) & _
                       " yerine " & SutunHarfi(p.hedefNo(j)) & " sutununda; oraya yazilacak."
         ElseIf durum = bdYok Then
-            MaddeEkle p.engel, p.engelSay, "Ana dosyada '" & p.hedefAdlari(j) & "' sutunu yok (" & _
+            KEkle p, 1, True, "Ana dosyada '" & p.hedefAdlari(j) & "' sutunu yok (" & _
                       SutunHarfi(eskiNo) & " sutununun basligi degismis). 'YENILE' calistir."
         ElseIf durum = bdBelirsiz Then
-            MaddeEkle p.engel, p.engelSay, "Ana dosyada '" & p.hedefAdlari(j) & "' adiyla birden fazla" & _
+            KEkle p, 1, True, "Ana dosyada '" & p.hedefAdlari(j) & "' adiyla birden fazla" & _
                       " sutun var ve hicbiri beklenen yerde degil. 'YENILE' calistir."
         End If
     Next j
@@ -689,10 +761,10 @@ Private Function PlanHazirla(ByRef p As AktarimPlani) As Boolean
         eskiNo = p.filtreler(j).Sutun
         durum = BaslikDogrula(p.kaynakWs, p.filtreler(j).Sutun, p.filtreler(j).Ad)
         If durum = bdYerDegisti Then
-            MaddeEkle p.dikkat, p.dikkatSay, "Filtre sutunu '" & p.filtreler(j).Ad & "' " & SutunHarfi(eskiNo) & _
+            KEkle p, 1, False, "Filtre sutunu '" & p.filtreler(j).Ad & "' " & SutunHarfi(eskiNo) & _
                       " yerine " & SutunHarfi(p.filtreler(j).Sutun) & " sutununda."
         ElseIf durum >= bdYok Then
-            MaddeEkle p.engel, p.engelSay, "Filtre sutunu '" & p.filtreler(j).Ad & "' aylik dosyada bulunamadi. 'YENILE' calistir."
+            KEkle p, 1, True, "Filtre sutunu '" & p.filtreler(j).Ad & "' aylik dosyada bulunamadi. 'YENILE' calistir."
         End If
         p.filtreMetni = p.filtreMetni & p.filtreler(j).Ad & " = " & p.filtreler(j).Ham & ";  "
     Next j
@@ -701,7 +773,7 @@ Private Function PlanHazirla(ByRef p As AktarimPlani) As Boolean
     Set gorulen = New Sozluk
     For j = 1 To p.adet
         If gorulen.Exists(p.hedefNo(j)) Then
-            MaddeEkle p.engel, p.engelSay, "Ana dosyadaki " & SutunHarfi(p.hedefNo(j)) & " (" & p.hedefAdlari(j) & _
+            KEkle p, 1, True, "Ana dosyadaki " & SutunHarfi(p.hedefNo(j)) & " (" & p.hedefAdlari(j) & _
                       ") sutununa iki kaynak yaziliyor: " & gorulen.Item(p.hedefNo(j)) & " ve " & p.kaynakAdlari(j) & _
                       ". Biri digerinin uzerine yazardi."
         Else
@@ -714,7 +786,7 @@ Private Function PlanHazirla(ByRef p As AktarimPlani) As Boolean
     If p.tutarHedefNo > 0 Then
         p.tutarAd = SutunAdi(Ayar(pnl, p.k, SATIR_TUTAR).Value)
         If BaslikDogrula(p.hedefWs, p.tutarHedefNo, p.tutarAd) >= bdYok Then
-            MaddeEkle p.dikkat, p.dikkatSay, "MUTABAKAT YOK: tutar sutunu '" & p.tutarAd & "' ana dosyada bulunamadi."
+            KEkle p, 7, False, "MUTABAKAT YOK: tutar sutunu '" & p.tutarAd & "' ana dosyada bulunamadi."
             p.tutarHedefNo = 0
         End If
         If p.tutarHedefNo > 0 Then
@@ -722,12 +794,14 @@ Private Function PlanHazirla(ByRef p As AktarimPlani) As Boolean
                 If p.hedefNo(j) = p.tutarHedefNo And p.kaynakNo(j) > 0 Then p.tutarJ = j
             Next j
             If p.tutarJ = 0 And Not p.sadeceIsaretli Then
-                MaddeEkle p.dikkat, p.dikkatSay, "MUTABAKAT YOK: tutar sutunu (" & SutunHarfi(p.tutarHedefNo) & " " & p.tutarAd & _
+                KEkle p, 7, False, "MUTABAKAT YOK: tutar sutunu (" & SutunHarfi(p.tutarHedefNo) & " " & p.tutarAd & _
                           ") bu panelde hicbir aylik sutunla eslesmemis."
             End If
         End If
     End If
 
+    If p.tutarHedefNo = 0 Then KYok p, 7
+    KTamam p, 1
     PlanHazirla = True
 
 End Function
@@ -736,13 +810,13 @@ End Function
 Private Sub EngelBildir(ByRef p As AktarimPlani)
 
     MsgBox "AKTARIM YAPILAMAZ  -  PANEL " & p.k & vbNewLine & vbNewLine & _
-           MaddeKisalt(p.engel, 700) & vbNewLine & _
+           "KONTROL NOKTALARI:" & vbNewLine & KarneSatiri(p.kDurum) & vbNewLine & vbNewLine & _
+           MaddeKisalt(p.engel, 650) & vbNewLine & _
            "Hicbir sey yazilmadi. Sorunu giderip tekrar dene." & vbNewLine & _
            "(Ipucu: 'On Kontrol' butun sorunlari tek seferde listeler.)", vbCritical, "Engel"
 
-    OlayYaz "ENGEL", p.k, p.partiNo, 0, TekSatir(p.engel), "Aktarim yapilmadi", _
-            DosyaAdiGuvenli(p.kaynakWb), SayfaAdiGuvenli(p.kaynakWs), _
-            DosyaAdiGuvenli(p.hedefWb), SayfaAdiGuvenli(p.hedefWs)
+    MaddeleriRaporaYaz p, p.engel, "ENGEL", "Aktarim yapilmadi", KD_ENGEL
+    KarneYaz p.pnl, p.k, p.kDurum, TR("4 AKTAR: ENGEL, hi#cbir #sey yaz#ilmad#i  (") & Format$(Now, "dd.mm hh:nn") & ")"
 
 End Sub
 
@@ -808,7 +882,7 @@ Private Function SonSatirBelirle(ByRef p As AktarimPlani) As Boolean
         p.sonSatir = onerilen
         p.supheliNot = p.supheliNot & ". Icerik: " & _
                        TekSatir(KuyrukOnizleme(p.kaynakWs, p.kaynakNo, p.adet, onerilen + 1, p.otomatikSon))
-        MaddeEkle p.dikkat, p.dikkatSay, "KAYNAK SON SATIR SUPHELI: " & p.supheliNot & _
+        KEkle p, 3, False, "KAYNAK SON SATIR SUPHELI: " & p.supheliNot & _
                   " (toplam/not satiri olabilir). Kontrol onerilen satira gore yapildi."
         Exit Function
     End If
@@ -829,6 +903,7 @@ Private Function SonSatirBelirle(ByRef p As AktarimPlani) As Boolean
             "IPTAL  = aktarimi durdur" & vbNewLine & vbNewLine & _
             "(Baska bir sinir icin panelde 'Son satir' hucresine yaz.)"
 
+    KSeviye p, 3, KD_DIKKAT
     cevap = MsgBox(Sigdir(metin, 900), vbYesNoCancel + vbExclamation + vbDefaultButton1, "Kaynak son satir")
     Select Case cevap
         Case vbYes
@@ -984,7 +1059,8 @@ Private Sub SatirSec(ByRef p As AktarimPlani)
 
     Dim i As Long, j As Long, satirSayisi As Long
     Dim fv() As Variant
-    Dim dolu As Boolean, uyar As Boolean
+    Dim tut() As Boolean
+    Dim kol As Variant
 
     satirSayisi = p.sonSatir - 1
     p.n = 0
@@ -998,30 +1074,34 @@ Private Sub SatirSec(ByRef p As AktarimPlani)
         Next j
     End If
 
+    ' SUTUN SUTUN ilerlenir: her sutun dizisi bir kez yerel degiskene alinir.
+    ' (p.kv(j)(i, 1) gibi UDT icinden hucre hucre erisim VBA'da cok yavas.)
+    ReDim tut(1 To satirSayisi)
+    For j = 1 To p.gercekAdet
+        kol = p.kv(j)
+        For i = 1 To satirSayisi
+            If Not tut(i) Then
+                If Not IsEmpty(kol(i, 1)) Then
+                    If Trim$(GuvenliMetin(kol(i, 1))) <> "" Then tut(i) = True
+                End If
+            End If
+        Next i
+    Next j
+
+    For j = 1 To p.filtreAdet
+        kol = fv(j)
+        For i = 1 To satirSayisi
+            If tut(i) Then
+                If Not FiltreUyar(p.filtreler(j), kol(i, 1)) Then tut(i) = False
+            End If
+        Next i
+    Next j
+
     ReDim p.uygun(1 To satirSayisi)
     For i = 1 To satirSayisi
-        dolu = False
-        For j = 1 To p.gercekAdet
-            If Not IsEmpty(p.kv(j)(i, 1)) Then
-                If Trim$(GuvenliMetin(p.kv(j)(i, 1))) <> "" Then
-                    dolu = True
-                    Exit For
-                End If
-            End If
-        Next j
-
-        If dolu Then
-            uyar = True
-            For j = 1 To p.filtreAdet
-                If Not FiltreUyar(p.filtreler(j), fv(j)(i, 1)) Then
-                    uyar = False
-                    Exit For
-                End If
-            Next j
-            If uyar Then
-                p.n = p.n + 1
-                p.uygun(p.n) = i
-            End If
+        If tut(i) Then
+            p.n = p.n + 1
+            p.uygun(p.n) = i
         End If
     Next i
 
@@ -1234,14 +1314,14 @@ Private Sub HedefAralikBelirle(ByRef p As AktarimPlani)
         ' --- SECILI SUTUN YAMASI: son aktif aktarimin satirlarina ---
         If Not SonAktifAralik(p.kaynakWb.Name, CStr(p.kaynakWs.Name), p.hedefWb.Name, CStr(p.hedefWs.Name), _
                               p.yamaAktarim, ilkY, sonY, kaynakEslesti) Then
-            MaddeEkle p.engel, p.engelSay, "Secili sutun yamasi icin bu ana dosya sayfasinda AKTIF (geri alinmamis) " & _
+            KEkle p, 1, True, "Secili sutun yamasi icin bu ana dosya sayfasinda AKTIF (geri alinmamis) " & _
                       "bir aktarim bulunamadi. Yamanin yazilacagi satirlar bilinmiyor. Yazim baslangicini " & _
                       "'Geri alinan araliga' veya 'Sutunun kendi sonu' yap ya da once tam aktarim yap."
             Exit Sub
         End If
         boy = sonY - ilkY + 1
         If p.n <> boy Then
-            MaddeEkle p.engel, p.engelSay, "Satir sayisi tutmuyor: son aktarim (no " & p.yamaAktarim & ") ana dosyada " & _
+            KEkle p, 1, True, "Satir sayisi tutmuyor: son aktarim (no " & p.yamaAktarim & ") ana dosyada " & _
                       ilkY & " - " & sonY & " (" & boy & " satir), simdi okunan " & p.n & " satir. Ayni filtre ve " & _
                       "ayni son satirla tekrar dene; yoksa satirlar kayardi."
             Exit Sub
@@ -1250,29 +1330,29 @@ Private Sub HedefAralikBelirle(ByRef p As AktarimPlani)
             p.baslangic(j) = ilkY
         Next j
         p.yama = True
-        MaddeEkle p.dikkat, p.dikkatSay, "SECILI SUTUN YAMASI: secili sutunlar ana dosyada " & ilkY & " - " & sonY & _
+        KEkle p, 1, False, "SECILI SUTUN YAMASI: secili sutunlar ana dosyada " & ilkY & " - " & sonY & _
                   " satirlarinin (aktarim no " & p.yamaAktarim & ") UZERINE yazilacak. Eski degerler yedeklenir; " & _
                   "Geri Al onlari geri getirir."
         If Not kaynakEslesti Then
-            MaddeEkle p.dikkat, p.dikkatSay, "Son aktif aktarim BASKA bir aylik dosyadan yapilmis; yamanin dogru " & _
+            KEkle p, 1, False, "Son aktif aktarim BASKA bir aylik dosyadan yapilmis; yamanin dogru " & _
                       "satirlara gittiginden emin ol."
         End If
 
     ElseIf p.mod = ymGeriAlinan Then
 
         If Not GeriAlinanAralik(p.hedefWb.Name, CStr(p.hedefWs.Name), p.boslukIlk, p.boslukSon) Then
-            MaddeEkle p.engel, p.engelSay, "'Geri alinan araliga' secili ama bu ana dosya sayfasinda geri alinmis " & _
+            KEkle p, 1, True, "'Geri alinan araliga' secili ama bu ana dosya sayfasinda geri alinmis " & _
                       "bir aralik yok. Bu mod, once 'Geri Al' ile bosaltilmis yere duzeltilmis veriyi yazmak icindir."
             Exit Sub
         End If
         boy = p.boslukSon - p.boslukIlk + 1
         If p.n > boy Then
             p.eklenecekSatir = p.n - boy
-            MaddeEkle p.dikkat, p.dikkatSay, "SATIR EKLENECEK: gelen veri " & p.n & " satir, bosluk " & boy & " satir (" & _
+            KEkle p, 1, False, "SATIR EKLENECEK: gelen veri " & p.n & " satir, bosluk " & boy & " satir (" & _
                       p.boslukIlk & "-" & p.boslukSon & "); ana dosyaya " & p.eklenecekSatir & _
                       " satir eklenecek, altindaki veriler asagi kayacak (Gecmis ve Rapor satir numaralari da kaydirilir)."
         ElseIf p.n < boy Then
-            MaddeEkle p.dikkat, p.dikkatSay, "BOSLUK KALACAK: gelen veri " & p.n & " satir, bosluk " & boy & _
+            KEkle p, 1, False, "BOSLUK KALACAK: gelen veri " & p.n & " satir, bosluk " & boy & _
                       " satir; " & (p.boslukIlk + p.n) & " - " & p.boslukSon & " arasi bos kalacak."
         End If
         For j = 1 To p.adet
@@ -1286,7 +1366,7 @@ Private Sub HedefAralikBelirle(ByRef p As AktarimPlani)
             If p.baslangic(j) < 2 Then p.baslangic(j) = 2
         Next j
         If p.adet > 1 And Not p.sadeceIsaretli Then
-            MaddeEkle p.dikkat, p.dikkatSay, "SATIR HIZASI RISKI: 'Sutunun kendi sonu' ile " & p.adet & _
+            KEkle p, 1, False, "SATIR HIZASI RISKI: 'Sutunun kendi sonu' ile " & p.adet & _
                       " sutun birden aktariliyor; her sutun kendi son dolu hucresinden baslar." & _
                       " Normal aylik aktarim icin dogru secim 'Sayfanin en alti'."
         End If
@@ -1309,7 +1389,7 @@ Private Sub HedefAralikBelirle(ByRef p As AktarimPlani)
     Next j
 
     If p.mod = ymSutunSonu And p.enKucukBas <> p.enBuyukBas Then
-        MaddeEkle p.dikkat, p.dikkatSay, "Sutunlarin baslangic satirlari FARKLI (" & p.enKucukBas & " ile " & _
+        KEkle p, 1, False, "Sutunlarin baslangic satirlari FARKLI (" & p.enKucukBas & " ile " & _
                   p.enBuyukBas & " arasi): ayni kaydin parcalari farkli satirlara yazilacak."
     End If
 
@@ -1317,14 +1397,14 @@ Private Sub HedefAralikBelirle(ByRef p As AktarimPlani)
     If p.eklenecekSatir > 0 Then
         genelSon = SonDoluSatir(p.hedefWs)
         If genelSon + p.eklenecekSatir > p.hedefWs.Rows.Count Then
-            MaddeEkle p.engel, p.engelSay, "Satir eklenemez: ana dosya Excel'in satir sinirini (" & _
+            KEkle p, 1, True, "Satir eklenemez: ana dosya Excel'in satir sinirini (" & _
                       SayiMetni(p.hedefWs.Rows.Count) & ") asar."
         End If
         kalanSatir = p.hedefWs.Rows.Count - (genelSon + p.eklenecekSatir)
     Else
         sonYazilacak = p.enBuyukBas + p.n - 1
         If sonYazilacak > p.hedefWs.Rows.Count Then
-            MaddeEkle p.engel, p.engelSay, "Excel'in satir siniri asiliyor: bir sayfa en fazla " & _
+            KEkle p, 1, True, "Excel'in satir siniri asiliyor: bir sayfa en fazla " & _
                       SayiMetni(p.hedefWs.Rows.Count) & " satir alir, bu aktarim " & _
                       SayiMetni(sonYazilacak) & ". satira kadar yazacakti."
         End If
@@ -1332,7 +1412,7 @@ Private Sub HedefAralikBelirle(ByRef p As AktarimPlani)
     End If
 
     If kalanSatir < SATIR_UYARI_ESIGI And p.engel = "" Then
-        MaddeEkle p.dikkat, p.dikkatSay, "SATIR SINIRINA YAKIN: aktarimdan sonra ana dosyada yalnizca " & SayiMetni(kalanSatir) & _
+        KEkle p, 1, False, "SATIR SINIRINA YAKIN: aktarimdan sonra ana dosyada yalnizca " & SayiMetni(kalanSatir) & _
                   " satirlik yer kalacak (Excel siniri " & SayiMetni(p.hedefWs.Rows.Count) & ")."
     End If
 
@@ -1345,29 +1425,32 @@ End Sub
 Private Sub EkDikkat(ByRef p As AktarimPlani)
 
     Dim j As Long, i As Long, korunan As Long
+    Dim kod As Long, tip As String
     Dim tipOnb As Sozluk, dolacak As Sozluk
     Dim kTip As String, hTip As String, tipUyusmaz As String, yesilBos As String
     Dim profilAdi As String, pEksik As String, pYeni As String
     Dim korumaMetni As String, tarihMetni As String, sabitUyusmaz As String
-    Dim x As Variant
+    Dim x As Variant, kol As Variant
+    Dim u() As Long
 
     If g_OkumaUyarisi <> "" Then
-        MaddeEkle p.dikkat, p.dikkatSay, "TARIH TASMASI (#####): su sutunlarin tarihleri SAYI olarak aktarilacak: " & Trim$(g_OkumaUyarisi)
+        KEkle p, 6, False, "TARIH TASMASI (#####): su sutunlarin tarihleri SAYI olarak aktarilacak: " & Trim$(g_OkumaUyarisi)
     End If
     If p.bozukMetni <> "" Then
-        MaddeEkle p.dikkat, p.dikkatSay, "Panelde okunamayan eslesme hucreleri atlanacak (panel satiri: " & _
+        KEkle p, 1, False, "Panelde okunamayan eslesme hucreleri atlanacak (panel satiri: " & _
                   Trim$(p.bozukMetni) & ")."
     End If
     If p.oneriSay > 0 Then
-        MaddeEkle p.dikkat, p.dikkatSay, "ONAYLANMAMIS ONERI: " & p.oneriSay & " eslesme henuz onaylanmadi" & _
+        KEkle p, 1, False, "ONAYLANMAMIS ONERI: " & p.oneriSay & " eslesme henuz onaylanmadi" & _
                   " (turuncu): " & p.oneriListesi
     End If
     If p.formulSayisi > 0 Then
-        MaddeEkle p.dikkat, p.dikkatSay, p.formulSayisi & " sutun FORMUL olarak tasinacak; goreli satir referanslari" & _
+        KEkle p, 6, False, p.formulSayisi & " sutun FORMUL olarak tasinacak; goreli satir referanslari" & _
                   " yeni satirlara kaydirilir, sutun harfleri ayni kalir."
     End If
 
     ' --- Veri tipi ve bicim korumasi ---
+    u = p.uygun
     Set tipOnb = New Sozluk
     ReDim p.korumaTip(1 To p.adet)
     For j = 1 To p.gercekAdet
@@ -1383,10 +1466,18 @@ Private Sub EkDikkat(ByRef p As AktarimPlani)
         End If
 
         korunan = 0
+        kol = p.kv(j)
+        tip = p.korumaTip(j)
         For i = 1 To p.n
-            x = p.kv(j)(p.uygun(i), 1)
+            x = kol(u(i), 1)
             If VarType(x) = vbString Then
-                If KorumaGerekir(CStr(x), p.korumaTip(j)) Then korunan = korunan + 1
+                ' Harfle baslayan metin icin cagri yapilmaz (KorumaGerekir hizli yolu)
+                If Len(x) > 0 Then
+                    kod = AscW(x)
+                    If Not ((kod >= 65 And kod <= 90) Or (kod >= 97 And kod <= 122) Or kod > 127) Then
+                        If KorumaGerekir(CStr(x), tip) Then korunan = korunan + 1
+                    End If
+                End If
             End If
         Next i
         If korunan > 0 And Not p.formul(j) Then
@@ -1405,27 +1496,27 @@ Private Sub EkDikkat(ByRef p As AktarimPlani)
     Next j
 
     If sabitUyusmaz <> "" Then
-        MaddeEkle p.dikkat, p.dikkatSay, "SABIT DEGER TIPI UYUSMAZ: " & sabitUyusmaz
+        KEkle p, 5, False, "SABIT DEGER TIPI UYUSMAZ: " & sabitUyusmaz
     End If
     If tipUyusmaz <> "" Then
-        MaddeEkle p.dikkat, p.dikkatSay, "VERI TIPI UYUSMAZ, yanlis eslesme olabilir: " & tipUyusmaz
+        KEkle p, 5, False, "VERI TIPI UYUSMAZ, yanlis eslesme olabilir: " & tipUyusmaz
     End If
     If korumaMetni <> "" Then
-        MaddeEkle p.dikkat, p.dikkatSay, "BICIM KORUMASI: bastaki sifir / uzun numara / formul gibi gorunen " & _
+        KEkle p, 6, False, "BICIM KORUMASI: bastaki sifir / uzun numara / formul gibi gorunen " & _
                   "metinler Excel bozmasin diye METIN olarak yazilacak: " & korumaMetni
     End If
 
     ' --- Kaynak tarih kontrolleri (hasar / ihbar) ---
     tarihMetni = KaynakTarihKontrolu(p)
-    If tarihMetni <> "" Then MaddeEkle p.dikkat, p.dikkatSay, tarihMetni
+    If tarihMetni <> "" Then KEkle p, 8, False, tarihMetni
 
     ' --- Tutar sutunu butunlugu (mutabakat bozuk metni yakalamaz) ---
     tarihMetni = TutarButunlugu(p)
-    If tarihMetni <> "" Then MaddeEkle p.dikkat, p.dikkatSay, tarihMetni
+    If tarihMetni <> "" Then KEkle p, 7, False, tarihMetni
 
     ' --- Zorunlu (yesil) sutunlarda satir bazinda bos hucre ---
     tarihMetni = YesilBosHucreler(p)
-    If tarihMetni <> "" Then MaddeEkle p.dikkat, p.dikkatSay, tarihMetni
+    If tarihMetni <> "" Then KEkle p, 4, False, tarihMetni
 
     If Not p.sadeceIsaretli Then
         Set dolacak = New Sozluk
@@ -1434,16 +1525,23 @@ Private Sub EkDikkat(ByRef p As AktarimPlani)
         Next j
         yesilBos = YesilBosSutunlar(p.hedefWs, dolacak)
         If yesilBos <> "" Then
-            MaddeEkle p.dikkat, p.dikkatSay, "YESIL SUTUN BOS KALACAK (ana dosyada zorunlu): " & yesilBos
+            KEkle p, 4, False, "YESIL SUTUN BOS KALACAK (ana dosyada zorunlu): " & yesilBos
         End If
 
         profilAdi = AyarMetni(p.pnl, p.k, SATIR_PROFIL)
         If profilAdi <> "" Then
             ProfilFarklari p.pnl, p.k, profilAdi, pEksik, pYeni
-            If pEksik <> "" Then MaddeEkle p.dikkat, p.dikkatSay, "PROFIL FARKI - profilde olup bu dosyada eslesmeyen: " & pEksik
-            If pYeni <> "" Then MaddeEkle p.dikkat, p.dikkatSay, "PROFIL FARKI - dosyada yeni (profilde yok, eslestirilmemis): " & pYeni
+            If pEksik <> "" Then KEkle p, 1, False, "PROFIL FARKI - profilde olup bu dosyada eslesmeyen: " & pEksik
+            If pYeni <> "" Then KEkle p, 1, False, "PROFIL FARKI - dosyada yeni (profilde yok, eslestirilmemis): " & pYeni
         End If
     End If
+
+    KTamam p, 1
+    KTamam p, 4
+    KTamam p, 5
+    KTamam p, 6
+    KTamam p, 7
+    KTamam p, 8
 
 End Sub
 
@@ -1486,19 +1584,25 @@ End Function
 ' "TUTUYOR" dese de veri eksik olabilir.
 Private Function TutarButunlugu(ByRef p As AktarimPlani) As String
 
+    Dim u() As Long
     Dim i As Long, r As Long
     Dim bozuk As Long, bos As Long, eksi As Long
     Dim ornBozuk As String, ornBos As String, ornEksi As String
-    Dim x As Variant
+    Dim x As Variant, kol As Variant
     Dim d As Double
     Dim metin As String
 
     TutarButunlugu = ""
-    If p.tutarJ = 0 Then Exit Function
+    If p.tutarJ = 0 Then
+        KYok p, 7
+        Exit Function
+    End If
 
+    kol = p.kv(p.tutarJ)
+    u = p.uygun
     For i = 1 To p.n
-        r = p.uygun(i)
-        x = p.kv(p.tutarJ)(r, 1)
+        r = u(i)
+        x = kol(r, 1)
         If IsError(x) Then
             bozuk = bozuk + 1
             If bozuk <= KONTROL_ORNEK Then ornBozuk = ornBozuk & (r + 1) & " "
@@ -1529,9 +1633,11 @@ End Function
 ' satirlardan bos olanlar (YesilBosSutunlar yalnizca hic eslesmeyeni bulur).
 Private Function YesilBosHucreler(ByRef p As AktarimPlani) As String
 
+    Dim u() As Long
     Dim renkler() As Long, renkVar() As Boolean
     Dim sonSut As Long, j As Long, i As Long, r As Long, bos As Long
     Dim orn As String, metin As String
+    Dim kol As Variant
 
     YesilBosHucreler = ""
     If p.gercekAdet = 0 Then Exit Function
@@ -1543,9 +1649,11 @@ Private Function YesilBosHucreler(ByRef p As AktarimPlani) As String
                 If YesilMi(renkler(p.hedefNo(j))) Then
                     bos = 0
                     orn = ""
+                    kol = p.kv(j)
+                    u = p.uygun
                     For i = 1 To p.n
-                        r = p.uygun(i)
-                        If Trim$(GuvenliMetin(p.kv(j)(r, 1))) = "" Then
+                        r = u(i)
+                        If Trim$(GuvenliMetin(kol(r, 1))) = "" Then
                             bos = bos + 1
                             If bos <= KONTROL_ORNEK Then orn = orn & (r + 1) & " "
                         End If
@@ -1571,8 +1679,9 @@ End Function
 ' yerine, aktarimdan ONCE ve kaynak uzerinde).
 Private Function KaynakTarihKontrolu(ByRef p As AktarimPlani) As String
 
+    Dim u() As Long
     Dim hasarNo As Long, ihbarNo As Long, jH As Long, jI As Long, j As Long, i As Long, r As Long
-    Dim xH As Variant, xI As Variant
+    Dim xH As Variant, xI As Variant, kolH As Variant, kolI As Variant
     Dim dH As Double, dI As Double
     Dim okH As Boolean, okI As Boolean
     Dim once As Long, bos As Long, bozuk As Long, metinTarih As Long
@@ -1582,20 +1691,29 @@ Private Function KaynakTarihKontrolu(ByRef p As AktarimPlani) As String
     KaynakTarihKontrolu = ""
     hasarNo = SutunNo(Ayar(p.pnl, p.k, SATIR_HASAR).Value)
     ihbarNo = SutunNo(Ayar(p.pnl, p.k, SATIR_IHBAR).Value)
-    If hasarNo = 0 And ihbarNo = 0 Then Exit Function
+    If hasarNo = 0 And ihbarNo = 0 Then
+        KYok p, 8
+        Exit Function
+    End If
 
     For j = 1 To p.gercekAdet
         If p.hedefNo(j) = hasarNo And hasarNo > 0 Then jH = j
         If p.hedefNo(j) = ihbarNo And ihbarNo > 0 Then jI = j
     Next j
-    If jH = 0 And jI = 0 Then Exit Function
+    If jH = 0 And jI = 0 Then
+        KYok p, 8
+        Exit Function
+    End If
+    If jH > 0 Then kolH = p.kv(jH)
+    If jI > 0 Then kolI = p.kv(jI)
 
+    u = p.uygun
     For i = 1 To p.n
-        r = p.uygun(i)
+        r = u(i)
         okH = False
         okI = False
         If jH > 0 Then
-            xH = p.kv(jH)(r, 1)
+            xH = kolH(r, 1)
             If Trim$(GuvenliMetin(xH)) = "" Then
                 bos = bos + 1
                 If bos <= KONTROL_ORNEK Then ornekBos = ornekBos & (r + 1) & " "
@@ -1609,7 +1727,7 @@ Private Function KaynakTarihKontrolu(ByRef p As AktarimPlani) As String
             End If
         End If
         If jI > 0 Then
-            xI = p.kv(jI)(r, 1)
+            xI = kolI(r, 1)
             If Trim$(GuvenliMetin(xI)) = "" Then
                 bos = bos + 1
                 If bos <= KONTROL_ORNEK Then ornekBos = ornekBos & (r + 1) & " "
@@ -1786,17 +1904,18 @@ Private Function OnayAl(ByRef p As AktarimPlani) As Boolean
     End If
     If p.sabitMetni <> "" Then ozet = ozet & "Sabit degerler : " & Left$(p.sabitMetni, 120) & vbNewLine
     If p.tutarJ > 0 Then ozet = ozet & "Tutar mutabakati : " & p.tutarAd & " (" & SutunHarfi(p.tutarHedefNo) & ")" & vbNewLine
+    ozet = ozet & vbNewLine & "KONTROL NOKTALARI:" & vbNewLine & KarneSatiri(p.kDurum) & vbNewLine
 
     If p.dikkat <> "" Then
-        kalanMetin = MSG_SINIR - Len(ozet) - 100
-        If kalanMetin < 150 Then kalanMetin = 150
-        ozet = ozet & vbNewLine & "DIKKAT (" & p.dikkatSay & " madde):" & vbNewLine & _
+        kalanMetin = MSGBOX_SINIR - Len(ozet) - 90
+        If kalanMetin < 120 Then kalanMetin = 120
+        ozet = ozet & vbNewLine & "DIKKAT (" & p.dikkatSay & " madde, tamami Rapor'a yazilir):" & vbNewLine & _
                MaddeKisalt(p.dikkat, kalanMetin) & vbNewLine & _
                "Maddeleri okudun mu? Yine de aktarilsin mi?"
         cevap = MsgBox(ozet, vbYesNo + vbExclamation + vbDefaultButton2, "Onay - DIKKAT")
         karar = IIf(cevap = vbYes, "Okundu, devam edildi", "Aktarim iptal edildi")
-        OlayYaz "DIKKAT", p.k, p.partiNo, 0, TekSatir(p.dikkat), karar, _
-                p.kaynakWb.Name, CStr(p.kaynakWs.Name), p.hedefWb.Name, CStr(p.hedefWs.Name)
+        ' Denetim izi: her DIKKAT maddesi KISALTILMADAN, kendi satirinda
+        MaddeleriRaporaYaz p, p.dikkat, "DIKKAT", karar, KD_DIKKAT
     Else
         ozet = ozet & vbNewLine & "Uyari yok. Aktarilsin mi?"
         cevap = MsgBox(ozet, vbYesNo + vbQuestion, "Onay")
@@ -1827,8 +1946,12 @@ Private Sub Yaz(ByRef p As AktarimPlani)
     Dim tutarVar As Boolean, tutarTuttu As Boolean
     Dim mutabakatMetni As String, tutarHarf As String
     Dim raporIlk As Long, raporSon As Long
+    Dim u() As Long
+    Dim kol As Variant, kolF As Variant, sabitHucre As Variant
+    Dim korumaTip As String, kod As Long
 
     n = p.n
+    u = p.uygun
 
     ' --- Satir ekleme ONAYDAN SONRA (iptalde bos satir kalmasin) ---
     If p.eklenecekSatir > 0 Then
@@ -1842,8 +1965,9 @@ Private Sub Yaz(ByRef p As AktarimPlani)
     ' --- Mutabakat: once ---
     tutarVar = (p.tutarJ > 0)
     If tutarVar Then
+        kol = p.kv(p.tutarJ)
         For i = 1 To n
-            If SayiDegeri(p.kv(p.tutarJ)(p.uygun(i), 1), deger) Then kaynakToplam = kaynakToplam + deger
+            If SayiDegeri(kol(u(i), 1), deger) Then kaynakToplam = kaynakToplam + deger
         Next i
         hedefOnceki = KolonToplami(p.hedefWs, p.tutarHedefNo)
         eskiAralik = AralikToplami(p.hedefWs, p.tutarHedefNo, p.baslangic(p.tutarJ), p.baslangic(p.tutarJ) + n - 1)
@@ -1867,26 +1991,39 @@ Private Sub Yaz(ByRef p As AktarimPlani)
         BicimDevral rng
 
         ReDim cikti(1 To n, 1 To 1)
+        korumaTip = p.korumaTip(j)
+        If p.kaynakNo(j) > 0 Then kol = p.kv(j)
+        If p.formul(j) Then kolF = p.kf(j)
         If p.kaynakNo(j) = 0 Then
+            sabitHucre = HucreDegeri(p.sabitDeger(j), korumaTip)
             For i = 1 To n
-                cikti(i, 1) = HucreDegeri(p.sabitDeger(j), p.korumaTip(j))
+                cikti(i, 1) = sabitHucre
             Next i
             rng.Value = cikti
         ElseIf p.formul(j) Then
             For i = 1 To n
-                f = GuvenliMetin(p.kf(j)(p.uygun(i), 1))
+                f = GuvenliMetin(kolF(u(i), 1))
                 If Left$(f, 1) = "=" Then
                     cikti(i, 1) = FormulSatirKaydir(f, p.kaynakNo(j), p.hedefNo(j), formulOnb, kaydirilamayan)
                 Else
-                    x = p.kv(j)(p.uygun(i), 1)
+                    x = kol(u(i), 1)
                     If VarType(x) = vbDate Then x = CDbl(x)
-                    cikti(i, 1) = HucreDegeri(x, p.korumaTip(j))
+                    cikti(i, 1) = HucreDegeri(x, korumaTip)
                 End If
             Next i
             rng.FormulaR1C1 = cikti
         Else
             For i = 1 To n
-                cikti(i, 1) = HucreDegeri(p.kv(j)(p.uygun(i), 1), p.korumaTip(j))
+                x = kol(u(i), 1)
+                If VarType(x) = vbString Then
+                    If Len(x) > 0 Then
+                        kod = AscW(x)
+                        If Not ((kod >= 65 And kod <= 90) Or (kod >= 97 And kod <= 122) Or kod > 127) Then
+                            If KorumaGerekir(CStr(x), korumaTip) Then x = "'" & x
+                        End If
+                    End If
+                End If
+                cikti(i, 1) = x
             Next i
             rng.Value = cikti
         End If
@@ -1935,6 +2072,12 @@ Private Sub Yaz(ByRef p As AktarimPlani)
     RaporYaz p.partiNo, aktarimNo, p.k, p.kaynakWb.Name, CStr(p.kaynakWs.Name), p.hedefWb.Name, CStr(p.hedefWs.Name), _
              p.sonSatir, n, p.adet, raporIlk, raporSon, p.filtreMetni, p.sabitMetni, mutabakatMetni, _
              tutarVar, kaynakToplam, tutarHarf, yazilanToplam, hedefOnceki, hedefYeni
+
+    ' --- K7 son hukmu: 4'lu mutabakat ve karne ---
+    If tutarVar And Not tutarTuttu Then KSeviye p, 7, KD_ENGEL
+    KarneYaz p.pnl, p.k, p.kDurum, TR("4 AKTAR: aktar#im no ") & aktarimNo & "  " & ChrW(183) & "  " & _
+             IIf(tutarVar, IIf(tutarTuttu, "FARK 0,00", "FARK " & TutarMetni(kaynakToplam - yazilanToplam)), _
+                 TR("tutar se#cilmemi#s")) & "  (" & Format$(Now, "dd.mm hh:nn") & ")"
 
     If kaydirilamayan > 0 Then
         OlayYaz "UYARI", p.k, p.partiNo, aktarimNo, kaydirilamayan & " formul deseni satir kaydirmasi yapilamadan " & _

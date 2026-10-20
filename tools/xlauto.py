@@ -309,8 +309,9 @@ def _document_code(path: Path) -> str:
 
 
 def _is_project_component(name: str) -> bool:
+    """M01_..M99_ modules, the Sozluk class and the v33 Module1/2/3."""
     return (name in LEGACY_MODULES or name in PROJECT_CLASSES
-            or any(name.startswith(p) and "_" in name for p in PROJECT_PREFIXES))
+            or re.match(r"^M\d\d_", name) is not None)
 
 
 def ensure_panel_sheet(wb):
@@ -320,6 +321,47 @@ def ensure_panel_sheet(wb):
     ws = wb.Worksheets.Add(After=wb.Worksheets(wb.Worksheets.Count))
     ws.Name = "Panel"
     return ws
+
+
+def scrub_personal_info(wb) -> None:
+    """Blank the document properties that carry the builder's name. Excel
+    rewrites 'last modified by' on save, so call strip_package_identity() on
+    the saved file as well."""
+    for name in ("Author", "Last Author", "Manager", "Company"):
+        try:
+            wb.BuiltinDocumentProperties(name).Value = ""
+        except Exception:
+            pass
+
+
+def strip_package_identity(path) -> None:
+    """Rewrite docProps/core.xml and app.xml inside a saved .xlsx/.xlsm so that
+    creator, lastModifiedBy, company and manager are empty. Works on the closed
+    file, so it cannot trigger an Excel dialog."""
+    import re
+    import shutil
+    import zipfile
+    path = Path(path)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    pats = [
+        (re.compile(rb"(<dc:creator>)[^<]*(</dc:creator>)"), rb""),
+        (re.compile(rb"(<cp:lastModifiedBy>)[^<]*(</cp:lastModifiedBy>)"), rb""),
+        (re.compile(rb"(<Company>)[^<]*(</Company>)"), rb""),
+        (re.compile(rb"(<Manager>)[^<]*(</Manager>)"), rb""),
+    ]
+    with zipfile.ZipFile(path) as zin, zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename in ("docProps/core.xml", "docProps/app.xml"):
+                for rx, _ in pats:
+                    data = rx.sub(lambda m: m.group(1) + m.group(2), data)
+            elif item.filename == "xl/workbook.xml":
+                data = re.sub(rb'(<x15ac:absPath url=")[^"]*(")', lambda m: m.group(1) + m.group(2), data)
+            elif item.filename.startswith("xl/comments") and item.filename.endswith(".xml"):
+                data = re.sub(rb"(<author>)[^<]*(</author>)",
+                              lambda m: m.group(1) + b"Aktarim Paneli" + m.group(2), data)
+            zout.writestr(item, data)
+    shutil.move(str(tmp), str(path))
 
 
 def inject_sources(wb, src: Path = SRC, keep: tuple = ()) -> list[str]:

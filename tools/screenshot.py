@@ -7,11 +7,12 @@ exported to PDF (Range.ExportAsFixedFormat) and rasterised with pdftoppm
 (Poppler / TeX Live / MiKTeX). Nothing is captured from the screen and the
 clipboard is not touched.
 
-  python tools/screenshot.py [--panel dist/AktarimPaneli_v34.xlsm]
+  python tools/screenshot.py [--panel dist/AktarimPaneli_v1.0.xlsm]
 """
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -25,7 +26,7 @@ import test_e2e as t  # noqa: E402
 XL_LANDSCAPE = 2
 
 
-def render(ws, address: str, out_png: Path, work: Path, dpi: int = 110):
+def render(ws, address: str, out_png: Path, work: Path, dpi: int = 150):
     ps = ws.PageSetup
     ps.Orientation = XL_LANDSCAPE
     ps.Zoom = False
@@ -46,7 +47,7 @@ def render(ws, address: str, out_png: Path, work: Path, dpi: int = 110):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--panel", default=str(xlauto.ROOT / "dist" / "AktarimPaneli_v34.xlsm"))
+    ap.add_argument("--panel", default=str(xlauto.ROOT / "dist" / "AktarimPaneli_v1.0.xlsm"))
     args = ap.parse_args()
     docs = xlauto.ROOT / "docs"
     docs.mkdir(exist_ok=True)
@@ -54,7 +55,14 @@ def main():
     panel = work / "AktarimPaneli_demo.xlsm"
     shutil.copy2(args.panel, panel)
 
-    with xlauto.ExcelSession(visible=False) as s:
+    # The Denetim sheet shows the Windows user name (KullaniciAdi reads Environ);
+    # Excel inherits this process' environment, so the PNGs show a neutral name.
+    os.environ["USERNAME"] = "AKTUERYA"
+    os.environ["USER"] = "AKTUERYA"
+
+    pol = t.Policy()
+    pol.set(("Rapor simdi acilsin", "&No"))
+    with xlauto.ExcelSession(visible=False, policy=pol) as s:
         xl = s.xl
         wbP = xl.Workbooks.Open(str(panel))
         src = t.make_source(xl, work)
@@ -78,10 +86,20 @@ def main():
         wbP.Activate()
         pnl.Activate()
         s.run(wbP, "PaneleGit", 1)
-        render(pnl, "$A$1:$R$50", docs / "panel_v34.png", work)
+        s.run(wbP, "OnKontrol")                       # fills the K1..K8 scorecard
+        s.run(wbP, "Aktar")                           # K7 verdict + Denetim sheet
+        wbP.Activate()
+        pnl.Activate()
+        s.run(wbP, "PaneleGit", 1)
+        render(pnl, "$A$1:$R$50", docs / "panel_v1.0.png", work)
+        render(wbP.Worksheets("Denetim"), "$A$1:$M$40", docs / "denetim_v1.0.png", work)
 
         klv = wbP.Worksheets(1)
-        render(klv, "$A$1:$D$48", docs / "kilavuz_v34.png", work)
+        # Sections start collapsed: crop to the last visible row (table of contents).
+        last = klv.UsedRange.Row + klv.UsedRange.Rows.Count - 1
+        while last > 1 and klv.Rows(last).Hidden:
+            last -= 1
+        render(klv, f"$A$1:$D${last + 1}", docs / "kilavuz_v1.0.png", work)
         wbP.Close(False)
 
 

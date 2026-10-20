@@ -2,7 +2,7 @@ Attribute VB_Name = "M04_Yenile"
 Option Explicit
 
 ' ============================================================
-' AKTARIM PANELI  v34  -  M04_Yenile
+' AKTARIM PANELI  v1.0  -  M04_Yenile
 '
 '   Yenile            : acik dosyalar, sayfalar, sutunlar, menuler;
 '                       eski eslesmeleri geri koyar, profili uygular.
@@ -110,7 +110,8 @@ Public Function PanelDuzeniGuncel() As Boolean
     On Error Resume Next
     s = ThisWorkbook.Names(DUZEN_ADI).RefersTo
     On Error GoTo 0
-    PanelDuzeniGuncel = (InStr(s, DUZEN_DEGERI) > 0)
+    ' v1.0 ve onceki yayin (v35) ayni yerlesimi kullanir
+    PanelDuzeniGuncel = (InStr(s, DUZEN_DEGERI) > 0 Or InStr(s, "v35") > 0)
 End Function
 
 
@@ -569,6 +570,7 @@ Public Sub BlokMenuleriTazele(ByVal pnl As Worksheet, ByVal k As Long)
     If son < ILK_SATIR Or Trim$(GuvenliMetin(lst.Cells(1, LST_HEDEF_SUTUNLAR).Value)) = "" Then
         TipSutunuYaz pnl, k, Nothing
         DurumYaz pnl, k
+        KarneHafif pnl, k
         Exit Sub
     End If
 
@@ -609,6 +611,7 @@ Public Sub BlokMenuleriTazele(ByVal pnl As Worksheet, ByVal k As Long)
 
     TipSutunuYaz pnl, k, hedefWs
     DurumYaz pnl, k
+    KarneHafif pnl, k
 
 End Sub
 
@@ -1156,6 +1159,7 @@ Public Sub SabitSonrasiTazele(ByVal pnl As Worksheet, ByVal k As Long)
         HaritayiYaz pnl, k, hedefWs, renkler, renkVar, sonSut
     End If
     DurumYaz pnl, k
+    KarneHafif pnl, k
 
 End Sub
 
@@ -1551,9 +1555,11 @@ End Function
 ' ============================================================
 '  CIFT TIKLAMA KISAYOLLARI  (Panel sayfa kodundan)
 '
-'   - Turuncu ONERI hucresine (HEDEF SUTUN) cift tik : oneri onaylanir
-'   - ISLEM hucresine cift tik                      : SEC acilir/kapanir
-'                                                     (FORMUL korunur)
+'   - "Bu paneli aktar" degeri          : Evet <-> Hayir
+'   - Turuncu ONERI (HEDEF SUTUN)       : oneri onaylanir
+'   - ISLEM hucresi                     : SEC ac / kapa (FORMUL korunur)
+'   - HEDEF HARITASI'nda dolmayan sutun : SABIT DEGERLER'e eklenir ve
+'     (ozellikle "<< YESIL, BOSTA")       DEGER hucresi secilir
 '  Kisayol uygulandiysa Cancel = True (Excel hucre duzenlemeye girmez).
 ' ============================================================
 Public Sub PanelCiftTik(ByVal Target As Range, ByRef Cancel As Boolean)
@@ -1567,13 +1573,36 @@ Public Sub PanelCiftTik(ByVal Target As Range, ByRef Cancel As Boolean)
     If pnl Is Nothing Then Exit Sub
     If Not Target.Worksheet Is pnl Then Exit Sub
     If Target.Cells.Count <> 1 Then Exit Sub
-    If Target.Row < ILK_SATIR Or Target.Row > SON_SATIR Then Exit Sub
     If Not PanelDuzeniGuncel() Then Exit Sub
 
     k = CLng(Int((Target.Column - 1) / BLOK_GENISLIK) + 1)
     If k < 1 Or k > BlokSayisi(pnl) Then Exit Sub
     ofs = (Target.Column - 1) Mod BLOK_GENISLIK
     c = BlokSutun(k)
+
+    ' --- "Bu paneli aktar" ---
+    If Target.Row = SATIR_DAHIL And ofs = OFS_AYAR Then
+        Cancel = True
+        EkranKilitle
+        If DahilMi(pnl, k) Then
+            Target.Value = HayirMetni()
+        Else
+            Target.Value = EvetMetni()
+        End If
+        DahilBoya pnl, k
+        DurumYaz pnl, k
+        EkranAc
+        Exit Sub
+    End If
+
+    If Target.Row < ILK_SATIR Or Target.Row > SON_SATIR Then Exit Sub
+
+    If ofs = OFS_HARITA Then
+        Cancel = True
+        HaritadanSabite pnl, k, Target
+        Exit Sub
+    End If
+
     kaynak = Trim$(GuvenliMetin(pnl.Cells(Target.Row, c + OFS_KAYNAK).Value))
     If kaynak = "" Then Exit Sub
 
@@ -1581,12 +1610,7 @@ Public Sub PanelCiftTik(ByVal Target As Range, ByRef Cancel As Boolean)
         If Not OneriMi(Target) Then Exit Sub
         Cancel = True
         hedef = SutunAdi(Target.Value)
-        EkranKilitle
-        On Error GoTo Cikis
-        OneriKaldir Target
-        BlokMenuleriTazele pnl, k
-Cikis:
-        EkranAc
+        OneriTekOnay pnl, k, Target
         OlayYaz "ONERI ONAY", k, 0, 0, "Cift tikla onaylandi: " & SutunAdi(kaynak) & " -> " & hedef, "Onaylandi"
         DurumCubugu "PANEL " & k & ": oneri onaylandi  (" & SutunAdi(kaynak) & " -> " & hedef & ")"
         On Error Resume Next
@@ -1599,6 +1623,76 @@ Cikis:
         EkranKilitle
         Target.Value = IslemMetni(Not IslemSecili(v), IslemFormul(v))
         EkranAc
+    End If
+
+End Sub
+
+
+Private Sub OneriTekOnay(ByVal pnl As Worksheet, ByVal k As Long, ByVal h As Range)
+    EkranKilitle
+    On Error GoTo Cikis
+    OneriKaldir h
+    BlokMenuleriTazele pnl, k
+Cikis:
+    EkranAc
+End Sub
+
+
+' HEDEF HARITASI'nda cift tiklanan, bu aktarimda DOLMAYACAK ana dosya
+' sutununu ilk bos SABIT DEGERLER satirina ekler ve DEGER hucresini secer.
+Public Sub HaritadanSabite(ByVal pnl As Worksheet, ByVal k As Long, ByVal hucre As Range)
+
+    Dim lst As Worksheet
+    Dim metin As String, deger As String, bulunan As String
+    Dim hNo As Long, h As Long, son As Long, r As Long, c As Long, hedefSatir As Long
+
+    metin = Trim$(GuvenliMetin(hucre.Value))
+    If metin = "" Then Exit Sub
+    c = BlokSutun(k)
+    If Left$(metin, 3) = "[+]" Then
+        DurumCubugu "PANEL " & k & ": bu sutun zaten dolacak (eslesme ya da sabit deger var)."
+        Exit Sub
+    End If
+
+    hNo = SutunNo(metin)
+    If hNo = 0 Then Exit Sub
+
+    ' Ana dosya listesindeki tam degeri bul ("J - DOSYA_TURU")
+    Set lst = ListeSayfasi(k)
+    son = lst.Cells(lst.Rows.Count, LST_HEDEF_SUTUNLAR).End(xlUp).Row
+    For h = 1 To son
+        deger = GuvenliMetin(lst.Cells(h, LST_HEDEF_SUTUNLAR).Value)
+        If SutunNo(deger) = hNo Then
+            bulunan = deger
+            Exit For
+        End If
+    Next h
+    If bulunan = "" Then Exit Sub
+
+    For r = SABIT_ILK To SABIT_SON
+        If Trim$(GuvenliMetin(pnl.Cells(r, c + OFS_SABIT_SUTUN).Value)) = "" And _
+           Trim$(GuvenliMetin(pnl.Cells(r, c + OFS_SABIT_DEGER).Value)) = "" Then Exit For
+    Next r
+    If r > SABIT_SON Then
+        MsgBox "SABIT DEGERLER kutusu dolu (en fazla " & SABIT_EN_FAZLA & " satir).", vbExclamation, "Sabit deger"
+        Exit Sub
+    End If
+
+    EkranKilitle
+    On Error GoTo Cikis
+    pnl.Cells(r, c + OFS_SABIT_SUTUN).Value = HucreMetni(bulunan)
+    SabitAlaniniDuzenle pnl, k, lst, BlokHedefSayfasi(pnl, k)
+    SabitSonrasiTazele pnl, k
+    For hedefSatir = SABIT_ILK To SABIT_SON
+        If GuvenliMetin(pnl.Cells(hedefSatir, c + OFS_SABIT_SUTUN).Value) = bulunan Then Exit For
+    Next hedefSatir
+Cikis:
+    EkranAc
+    If hedefSatir >= SABIT_ILK And hedefSatir <= SABIT_SON Then
+        On Error Resume Next
+        Application.Goto pnl.Cells(hedefSatir, c + OFS_SABIT_DEGER)
+        On Error GoTo 0
+        DurumCubugu "PANEL " & k & ": " & bulunan & " SABIT DEGERLER'e eklendi - DEGER'i yazin."
     End If
 
 End Sub
