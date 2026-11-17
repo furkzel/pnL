@@ -45,13 +45,22 @@ Option Private Module
 '   - IIf iki dali da hesaplar; Nothing olabilecek nesnede kullanma.
 ' ============================================================
 
-Public Const SURUM As String = "v1.1-dev"
+Public Const SURUM As String = "v1.1"
 Public Const PANEL_YAZI_TIPI As String = "Calibri"
 Public Const PANEL_YAZI_BOYUT As Double = 9.5
 
+' Yazi olcegi (tek aile, dort basamak + gosterge rakami). Font.Size
+' yalnizca bu sabitlerle verilir (build kapisi denetler).
+Public Const YZ_BASLIK As Double = 12        ' sayfa / blok basligi
+Public Const YZ_BOLUM As Double = 10         ' bolum basligi (kalin), birincil buton
+Public Const YZ_GOVDE As Double = 9.5        ' govde, tablo, ikincil buton
+Public Const YZ_DIPNOT As Double = 8.5       ' not, aciklama, alt yazi
+Public Const YZ_GOSTERGE As Double = 16      ' KPI rakami (yalniz Denetim kartlari)
+
 ' Panel duzeni isareti (calisma kitabi adi). v33 panelinde yoktur.
 Public Const DUZEN_ADI As String = "AP_DUZEN"
-Public Const DUZEN_DEGERI As String = "v1.0"
+Public Const DUZEN_DEGERI As String = "v1.1"
+Public Const DUZEN_V10 As String = "v1.0"      ' v1.0 (ve v35): ayni tablo/ayar ofsetleri
 
 ' ------------------------------------------------------------
 '  SAYFA ADLARI  (Kilavuz adi Turkce harf icerdigi icin fonksiyon)
@@ -65,6 +74,10 @@ Public Const SAYFA_GELISTIRICI As String = "Gelistirici"
 Public Const SAYFA_YEDEK As String = "Yedek"
 Public Const SAYFA_DENETIM As String = "Denetim"
 Public Const SAYFA_LISTE_ONEK As String = "Listeler"
+Public Const SAYFA_ANALIZ As String = "Analiz"
+Public Const SAYFA_AYARLAR As String = "Ayarlar"
+Public Const SAYFA_BELLEK As String = "Bellek"          ' gizli: durum ve bildirim bellegi
+Public Const SAYFA_SABLON As String = "AnalizSablon"    ' gizli: kullanici analiz sablonlari
 
 ' ------------------------------------------------------------
 '  PANEL YERLESIMI  (v1.0: blok basina 6 sutun)
@@ -114,7 +127,11 @@ Public Const SATIR_PROFIL As Long = 18
 Public Const SATIR_TUTAR As Long = 19
 Public Const SATIR_HASAR As Long = 20
 Public Const SATIR_IHBAR As Long = 21
-Public Const SATIR_AYAR_SON As Long = 21
+Public Const SATIR_ANAHTAR As Long = 22      ' v1.1: K9 anahtar (hasar/dosya no)
+Public Const SATIR_KIRILIM As Long = 23      ' v1.1: K12/K13 kirilim (brans/sirket)
+Public Const SATIR_DONEM As Long = 24        ' v1.1: K10 rapor donemi sonu
+Public Const SATIR_AYAR_SON As Long = 24
+Public Const SATIR_V10_AYAR_SON As Long = 21 ' v1.0 ayar karti son satiri
 
 Public Const SABIT_BASLIK As Long = 8
 Public Const SABIT_ILK As Long = 9
@@ -122,11 +139,13 @@ Public Const SABIT_SON As Long = 23
 Public Const SABIT_NOT As Long = 24
 Public Const SABIT_EN_FAZLA As Long = 15
 
-' KONTROL NOKTALARI karnesi (c+5): 8 baslik, 9..16 K1..K8, 17 son kontrol notu
+' KONTROL NOKTALARI karnesi (c+5): 8 baslik + rozet, 9..22 K1..K14,
+' 23 veri kalitesi skoru, 24 son kontrol notu (v1.0: 9..16 K1..K8, 17 not)
 Public Const KARNE_BASLIK As Long = 8
 Public Const KARNE_ILK As Long = 9
-Public Const KARNE_NOT As Long = 17
-Public Const K_SAYI As Long = 8
+Public Const KARNE_KALITE As Long = 23
+Public Const KARNE_NOT As Long = 24
+Public Const K_SAYI As Long = 14
 
 ' Kontrol noktasi durumlari (artan onem sirasiyla)
 Public Const KD_BEKLIYOR As String = "-"       ' henuz calismadi
@@ -204,6 +223,93 @@ Public Const BENZERLIK_ESIGI As Double = 0.7
 Public Const KUYRUK_PENCERE As Long = 30
 Public Const KUYRUK_EN_FAZLA As Long = 15
 Public Const KONTROL_ORNEK As Long = 5       ' on kontrolde gosterilen ornek satir sayisi
+Public Const TABAKA_PARCA As Long = 100      ' M9: bas / orta / son / rastgele parca boyu
+Public Const TABAKA_TOHUM As Long = 20260917 ' M9: rastgele parca icin sabit tohum (tekrarlanabilir)
+Public Const BILDIRIM_TUTULAN As Long = 200  ' Bellek'te tutulan son bildirim
+Public Const BILDIRIM_GOSTERILEN As Long = 5 ' serit listesinde gosterilen
+Public Const KILIT_UZANTI As String = ".aplock"
+
+' Veri kalitesi skoru agirliklari (toplam 100; DN-06). Uygulanamayan
+' bilesenin agirligi digerlerine oransal dagitilir.
+Public Const KS_TAMLIK As Double = 30
+Public Const KS_GECERLILIK As Double = 25
+Public Const KS_TEKILLIK As Double = 20
+Public Const KS_MAKULLUK As Double = 15
+Public Const KS_MUTABAKAT As Double = 10
+
+' ------------------------------------------------------------
+'  DUZENLENEBILIR ESIKLER (Ayarlar sayfasi; M15_Esik)
+'  Burada yalnizca VARSAYILANLAR durur. Etkin deger Esik(ek...) ile
+'  Ayarlar sayfasindan okunur; bos/gecersizse varsayilan kullanilir.
+' ------------------------------------------------------------
+Public Enum EsikKod
+    ekTarihAltYil = 1       ' K10/M8: makul tarih alt siniri (yil)
+    ekTarihUstAy            ' K10/M8: ust sinir = donem sonu + N ay
+    ekZSkor                 ' K11: |z| esigi
+    ekZMinAy                ' K11: z icin gereken en az gecmis ay
+    ekBuyukHasar            ' K11: buyuk hasar tutari (0 = kapali)
+    ekBenfordMad            ' K11: Benford ilk hane MAD esigi (0 = kapali)
+    ekBenfordMinN           ' K11: Benford icin en az satir
+    ekK9Pencere             ' K9: ana dosyanin taranan son satir sayisi
+    ekK9Ornek               ' K9: ana dosyada aranan ornek satir
+    ekK9KopyaEngel          ' K9: birebir kopya satir ENGEL mi (1) DIKKAT mi (0)
+    ekK12Pencere            ' K12: kategori kaymasi icin taranan son satir
+    ekTamlikHedef           ' kalite: tamlik hedefi (%)
+    ekKaliteHedef           ' kalite skoru hedefi (0-100)
+    ekYedekParti            ' M14: yedegi saklanan son parti sayisi
+    ekKilitDakika           ' M12: kilit bayatlik suresi (dakika)
+    ekMutabakatSutun        ' M1: mutabakat yapilan en fazla tutar sutunu
+    ekMutabakatTolerans     ' K7: mutlak tolerans (para birimi)
+    ekDosyaMB               ' Denetim: dosya boyutu uyari esigi (MB)
+    ekAnalizGrup            ' Analiz: karma gruplama siniri (ustu siralama)
+    ekAnalizSatir           ' Analiz: tabloda gosterilen en fazla satir
+End Enum
+Public Const ESIK_SAYI As Long = 20
+
+Public Const ESV_TARIH_ALT_YIL As Double = 1990
+Public Const ESV_TARIH_UST_AY As Double = 12
+Public Const ESV_Z_SKOR As Double = 3
+Public Const ESV_Z_MIN_AY As Double = 3
+Public Const ESV_BUYUK_HASAR As Double = 10000000
+Public Const ESV_BENFORD_MAD As Double = 0.015
+Public Const ESV_BENFORD_MIN_N As Double = 1000
+Public Const ESV_K9_PENCERE As Double = 250000
+Public Const ESV_K9_ORNEK As Double = 200
+Public Const ESV_K9_KOPYA_ENGEL As Double = 1
+Public Const ESV_K12_PENCERE As Double = 250000
+Public Const ESV_TAMLIK_HEDEF As Double = 99.5
+Public Const ESV_KALITE_HEDEF As Double = 95
+Public Const ESV_YEDEK_PARTI As Double = 20
+Public Const ESV_KILIT_DAKIKA As Double = 120
+Public Const ESV_MUTABAKAT_SUTUN As Double = 8
+Public Const ESV_MUTABAKAT_TOLERANS As Double = 0.005
+Public Const ESV_DOSYA_MB As Double = 50
+Public Const ESV_ANALIZ_GRUP As Double = 5000
+Public Const ESV_ANALIZ_SATIR As Double = 50
+
+' Ayarlar sayfasi yerlesimi
+Public Const AYR_BASLIK_SATIR As Long = 5
+Public Const AYR_ILK As Long = 6                ' ESIK_SAYI satir: 6..25
+Public Const AYR_KOD As Long = 2
+Public Const AYR_AD As Long = 3
+Public Const AYR_DEGER As Long = 4
+Public Const AYR_VARSAYILAN As Long = 5
+Public Const AYR_ACIKLAMA As Long = 6
+Public Const AYR_Z_BASLIK As Long = 28          ' ZORUNLU SUTUNLAR (M10 meta veri)
+Public Const AYR_Z_ILK As Long = 30
+Public Const AYR_Z_SON As Long = 129
+Public Const AYR_Z_SAYFA As Long = 2            ' ana dosya sayfasi (bos = hepsi)
+Public Const AYR_Z_SUTUN As Long = 3            ' ana dosya basligi
+
+' Bellek sayfasi (gizli): anahtar/deger ve bildirim halkasi
+Public Const BLK_ANAHTAR As Long = 1
+Public Const BLK_DEGER As Long = 2
+Public Const BLK_ZAMAN As Long = 3
+Public Const BLD_ZAMAN As Long = 5
+Public Const BLD_SEVIYE As Long = 6
+Public Const BLD_BASLIK As Long = 7
+Public Const BLD_METIN As Long = 8
+Public Const BLD_RAPOR As Long = 9
 
 ' Eski surumlerin ana dosyaya koydugu gecici olcut isareti (harita/listeden dusulur)
 Public Const KONTROL_BASLIK As String = "_KONTROL_FARK"
@@ -237,8 +343,18 @@ Public Const R_EXCEL_KULLANICI As Long = 23
 Public Const R_YAZILAN_TOPLAM As Long = 24   ' v34
 Public Const R_HEDEF_ONCEKI As Long = 25     ' v34
 Public Const R_HEDEF_YENI As Long = 26       ' v34
-Public Const R_KONTROL As Long = 27          ' v1.0: kontrol noktasi (K1..K8)
-Public Const R_SON As Long = 27
+Public Const R_KONTROL As Long = 27          ' v1.0: kontrol noktasi (K1..K14)
+Public Const R_KAYNAK_YOL As Long = 28       ' v1.1: kaynak soyu (M15)
+Public Const R_KAYNAK_BOYUT As Long = 29
+Public Const R_KAYNAK_ZAMAN As Long = 30
+Public Const R_KAYNAK_KARMA As Long = 31     ' K14 kaynak izi
+Public Const R_ICERIK_IZI As Long = 32       ' K2 icerik izi (M7)
+Public Const R_SURE_MS As Long = 33          ' adim suresi (AL-04)
+Public Const R_ADET As Long = 34             ' adet mutabakati (M2)
+Public Const R_KALITE As Long = 35           ' veri kalitesi skoru 0-100
+Public Const R_METRIK As Long = 36           ' metrikler: ad=deger;...
+Public Const R_SON As Long = 36
+Public Const R_V10_SON As Long = 27
 
 ' ------------------------------------------------------------
 '  GECMIS SAYFASI SUTUNLARI (Geri Al defteri)
@@ -295,6 +411,10 @@ Public Const ST_HASAR As Long = 9
 Public Const ST_IHBAR As Long = 10
 Public Const ST_YAZIM As Long = 11
 Public Const ST_SABITLER As Long = 12
+Public Const ST_ANAHTAR As Long = 13          ' v1.1
+Public Const ST_KIRILIM As Long = 14          ' v1.1
+Public Const ST_DONEM As Long = 15            ' v1.1
+Public Const ST_SON As Long = 15
 
 Public Const SERIT_SOL As Double = 10
 Public Const SERIT_BUTON_GENISLIK As Double = 124

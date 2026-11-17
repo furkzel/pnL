@@ -83,6 +83,10 @@ LO_REWRITES = [
 
 
 def lo_line(line: str) -> str:
+    # Excel-only construct marked in the source (e.g. Byte() = String, UDT LSet):
+    # the line is commented out in the LibreOffice copy only.
+    if line.rstrip().endswith("' LO-atla"):
+        return "' " + line
     for rx, rep in LO_REWRITES:
         line = rx.sub(rep, line)
     return line

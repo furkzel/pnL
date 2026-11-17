@@ -169,3 +169,7 @@ xlsheetveryhidden
 xlvalues
 xlwhole
 xlyes
+vbempty
+vbnull
+vberror
+eof
