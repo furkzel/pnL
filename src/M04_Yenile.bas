@@ -71,15 +71,15 @@ Public Sub YenileCalistir(ByVal sessiz As Boolean)
         ozet = ozet & vbNewLine & "DOSYA ACMA HATASI:" & vbNewLine & g_SonAcmaHatasi & vbNewLine
     End If
     ozet = ozet & vbNewLine & "Ayrintilar her panelin DURUM satirinda."
-    MsgBox Sigdir(ozet, MSG_SINIR), vbInformation, "Yenile"
+    Bildir BS_BILGI, "Yenile", Sigdir(ozet, MSG_SINIR)
     Exit Sub
 
 Hata:
     DurumCubugu ""
     EkranAc
-    MsgBox "YENILE SIRASINDA HATA" & vbNewLine & vbNewLine & _
+    Bildir BS_ENGEL, "Hata", "YENILE SIRASINDA HATA" & vbNewLine & vbNewLine & _
            "Adim  : " & adim & vbNewLine & _
-           "Hata  : " & Err.Number & " - " & Err.Description, vbCritical, "Hata"
+           "Hata  : " & Err.Number & " - " & Err.Description
 
 End Sub
 
@@ -88,23 +88,23 @@ End Sub
 ' yapacagini soyler.
 Public Function PanelHazirMi(ByVal pnl As Worksheet) As Boolean
 
+    Dim neden As String
+
     PanelHazirMi = False
     If pnl Is Nothing Then
-        MsgBox "Panel sayfasi bulunamadi." & vbNewLine & _
-               "Alt+F8 > SifirdanKur calistir.", vbExclamation, "Panel"
+        neden = "Panel sayfasi bulunamadi."
+    ElseIf Not PanelDuzeniGuncel() Then
+        neden = "Panel sayfasi eski bir surumun duzeninde (v33 / v34 / v1.0)." & vbNewLine & _
+                "SifirdanKur paneldeki tum ayarlari ve eslestirmeleri" & vbNewLine & _
+                "koruyarak yeni duzene tasir."
+    ElseIf BlokSayisi(pnl) = 0 Then
+        neden = "Panel blogu bulunamadi."
+    Else
+        PanelHazirMi = True
         Exit Function
     End If
-    If Not PanelDuzeniGuncel() Then
-        MsgBox "Panel sayfasi eski bir surumun duzeninde (v33 / v34 / v1.0)." & vbNewLine & vbNewLine & _
-               "Alt+F8 > SifirdanKur calistir: paneldeki tum ayarlar ve" & vbNewLine & _
-               "eslestirmeler korunarak yeni duzene tasinir.", vbExclamation, "Panel"
-        Exit Function
-    End If
-    If BlokSayisi(pnl) = 0 Then
-        MsgBox "Panel blogu bulunamadi. Alt+F8 > SifirdanKur calistir.", vbExclamation, "Panel"
-        Exit Function
-    End If
-    PanelHazirMi = True
+    ' Serit olmayabilir: bildirim seridi yerine tek modal uyari
+    MsgBox neden & vbNewLine & vbNewLine & "Alt+F8 > SifirdanKur calistir.", vbExclamation, "Panel"
 
 End Function
 
@@ -976,8 +976,8 @@ Public Sub IsaretleriTemizle()
 Cikis:
     EkranAc
 
-    MsgBox "PANEL " & k & ": " & adet & " SEC isareti kaldirildi." & vbNewLine & _
-           "(FORMUL isaretleri korunur.)", vbInformation
+    Bildir BS_BILGI, "Aktarim Paneli", "PANEL " & k & ": " & adet & " SEC isareti kaldirildi." & vbNewLine & _
+           "(FORMUL isaretleri korunur.)"
 
 End Sub
 
@@ -1747,7 +1747,7 @@ Public Sub HaritadanSabite(ByVal pnl As Worksheet, ByVal k As Long, ByVal hucre 
            Trim$(GuvenliMetin(pnl.Cells(r, c + OFS_SABIT_DEGER).Value)) = "" Then Exit For
     Next r
     If r > SABIT_SON Then
-        MsgBox "SABIT DEGERLER kutusu dolu (en fazla " & SABIT_EN_FAZLA & " satir).", vbExclamation, "Sabit deger"
+        Bildir BS_DIKKAT, "Sabit deger", "SABIT DEGERLER kutusu dolu (en fazla " & SABIT_EN_FAZLA & " satir)."
         Exit Sub
     End If
 

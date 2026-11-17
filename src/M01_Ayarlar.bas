@@ -302,6 +302,29 @@ Public Const AYR_Z_SON As Long = 129
 Public Const AYR_Z_SAYFA As Long = 2            ' ana dosya sayfasi (bos = hepsi)
 Public Const AYR_Z_SUTUN As Long = 3            ' ana dosya basligi
 
+' Analiz sayfasi: istek karti (etiket B, deger D), yorum, tablo, grafik
+Public Const AN_ETIKET_SUTUN As Long = 2
+Public Const AN_DEGER_SUTUN As Long = 4
+Public Const AN_SATIR_SABLON As Long = 5
+Public Const AN_SATIR_KAYNAK As Long = 6
+Public Const AN_SATIR_SATIR As Long = 7       ' satir boyutu
+Public Const AN_SATIR_SUTUN As Long = 8       ' sutun boyutu (opsiyonel)
+Public Const AN_SATIR_OLCU As Long = 9
+Public Const AN_SATIR_OLCU_SUTUN As Long = 10
+Public Const AN_SATIR_FILTRE_SUTUN As Long = 11
+Public Const AN_SATIR_FILTRE As Long = 12
+Public Const AN_SATIR_DONEM_SUTUN As Long = 13
+Public Const AN_SATIR_DONEM_BAS As Long = 14
+Public Const AN_SATIR_DONEM_SON As Long = 15
+Public Const AN_ILK_ALAN As Long = 5
+Public Const AN_SON_ALAN As Long = 15
+Public Const AN_YORUM_ILK As Long = 18          ' 3 madde: 18..20
+Public Const AN_TABLO_ILK As Long = 23          ' sonuc tablosu basligi
+Public Const AN_TABLO_SUTUN As Long = 2
+Public Const AN_EN_FAZLA_SUTUN As Long = 12     ' sutun boyutunda gosterilen en fazla deger
+Public Const AN_GRAFIK As String = "AP_AnalizGrafik"
+Public Const AN_LST_SUTUN As Long = 30          ' istek karti menuleri (gizli liste sutunlari 30..)
+
 ' Bellek sayfasi (gizli): anahtar/deger ve bildirim halkasi
 Public Const BLK_ANAHTAR As Long = 1
 Public Const BLK_DEGER As Long = 2

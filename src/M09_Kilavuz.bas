@@ -88,8 +88,8 @@ Public Sub KilavuzKur()
     Exit Sub
 
 Hata:
-    MsgBox "KILAVUZ KURULAMADI" & vbNewLine & vbNewLine & _
-           "Hata : " & Err.Number & " - " & Err.Description, vbExclamation, "Kilavuz"
+    Bildir BS_DIKKAT, "Kilavuz", "KILAVUZ KURULAMADI" & vbNewLine & vbNewLine & _
+           "Hata : " & Err.Number & " - " & Err.Description
 
 End Sub
 
@@ -937,8 +937,8 @@ Public Sub GelistiriciGuncelle()
     Exit Sub
 
 Hata:
-    MsgBox "GELISTIRICI SAYFASI GUNCELLENEMEDI" & vbNewLine & vbNewLine & _
-           "Hata : " & Err.Number & " - " & Err.Description, vbExclamation, "Gelistirici"
+    Bildir BS_DIKKAT, "Gelistirici", "GELISTIRICI SAYFASI GUNCELLENEMEDI" & vbNewLine & vbNewLine & _
+           "Hata : " & Err.Number & " - " & Err.Description
 
 End Sub
 

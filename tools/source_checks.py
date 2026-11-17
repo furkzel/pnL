@@ -22,8 +22,25 @@ def check_ascii(src=SRC):
     return problems
 
 
+MSGBOX_LIMIT = 30   # UX-01: decisions and data-safety alerts only; the rest goes to Bildir
+
+
+def count_msgbox(src=SRC):
+    n = 0
+    for path in sorted(src.glob('*')):
+        if path.suffix.lower() not in ('.bas', '.cls'):
+            continue
+        for line in path.read_text(encoding='ascii', errors='replace').splitlines():
+            code = code_only(line)
+            if re.search(r'\bMsgBox\b', code) and 'VbMsgBoxResult' not in code:
+                n += 1
+    return n
+
+
 def check_sources(src=SRC, *, palette=True):
     problems = check_ascii(src)
+    if palette and count_msgbox(src) > MSGBOX_LIMIT:
+        problems.append(f'{count_msgbox(src)} MsgBox calls > {MSGBOX_LIMIT} (use Bildir for information)')
     for path in sorted(src.glob('*')):
         if path.suffix.lower() not in ('.bas', '.cls'):
             continue

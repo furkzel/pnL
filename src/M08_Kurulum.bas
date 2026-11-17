@@ -127,13 +127,13 @@ Public Sub SifirdanKur()
             IIf(kilavuzTamam, "kuruldu", "KURULAMADI") & ", Gelistirici: " & _
             IIf(gelistiriciTamam, "guncellendi", "GUNCELLENEMEDI"), ""
 
-    MsgBox "KURULUM TAMAMLANDI  (" & SURUM & ")" & vbNewLine & vbNewLine & _
+    Bildir BS_OK, "Sifirdan Kur", "KURULUM TAMAMLANDI  (" & SURUM & ")" & vbNewLine & vbNewLine & _
            sonuc & _
            "Rapor, Gecmis, Profiller, Setler : hazir" & vbNewLine & _
            "Kilavuz      : " & IIf(kilavuzTamam, "kuruldu", "KURULAMADI") & vbNewLine & _
            "Gelistirici  : " & IIf(gelistiriciTamam, "guncellendi", "GUNCELLENEMEDI") & vbNewLine & vbNewLine & _
            "SIRADAKI ADIM: kaynak ve ana dosyalari ac, YENILE'ye bas," & vbNewLine & _
-           "sonra bu dosyayi kaydet.", vbInformation, "Sifirdan Kur"
+           "sonra bu dosyayi kaydet."
     Exit Sub
 
 Hata:
@@ -170,14 +170,14 @@ Public Sub PaneliYenidenKur()
     EkranAc
     PaneleGit 1
     OlayYaz "KURULUM", 0, 0, 0, "PaneliYenidenKur: " & sonuc, ""
-    MsgBox "Panel yeniden cizildi." & vbNewLine & vbNewLine & sonuc & vbNewLine & vbNewLine & _
-           "Dosyalari acip YENILE'ye bas.", vbInformation, "Paneli Yeniden Kur"
+    Bildir BS_OK, "Paneli Yeniden Kur", "Panel yeniden cizildi." & vbNewLine & vbNewLine & sonuc & vbNewLine & vbNewLine & _
+           "Dosyalari acip YENILE'ye bas."
     Exit Sub
 
 Hata:
     EkranAc True
-    MsgBox "PANEL YENIDEN KURULAMADI" & vbNewLine & vbNewLine & _
-           "Hata : " & Err.Number & " - " & Err.Description, vbCritical, "Paneli Yeniden Kur"
+    Bildir BS_ENGEL, "Paneli Yeniden Kur", "PANEL YENIDEN KURULAMADI" & vbNewLine & vbNewLine & _
+           "Hata : " & Err.Number & " - " & Err.Description
 
 End Sub
 
@@ -216,20 +216,20 @@ Public Sub PanelKur()
     PaneleGit 1
     OlayYaz "KURULUM", 0, 0, 0, "Panel sayfasi bos olarak kuruldu (PanelKur, " & SURUM & ")", ""
 
-    MsgBox "Panel kuruldu." & vbNewLine & vbNewLine & _
+    Bildir BS_OK, "Panel Kur", "Panel kuruldu." & vbNewLine & vbNewLine & _
            "AKIS:" & vbNewLine & _
            "1. Kaynak ve ana dosyalari ac (Enable Editing)." & vbNewLine & _
            "2. Panelde dosya/sayfa sec, YENILE'ye bas." & vbNewLine & _
            "3. Otomatik Eslestir, onerileri onayla, On Kontrol." & vbNewLine & _
            "4. Aktaracagin panellerde 'Bu paneli aktar' = Evet." & vbNewLine & _
            "5. AKTAR." & vbNewLine & vbNewLine & _
-           "Ayrintili anlatim: KILAVUZ.", vbInformation, "Panel Kur"
+           "Ayrintili anlatim: KILAVUZ."
     Exit Sub
 
 Hata:
     EkranAc True
-    MsgBox "PANEL KURULAMADI" & vbNewLine & vbNewLine & _
-           "Hata : " & Err.Number & " - " & Err.Description, vbCritical, "Panel Kur"
+    Bildir BS_ENGEL, "Panel Kur", "PANEL KURULAMADI" & vbNewLine & vbNewLine & _
+           "Hata : " & Err.Number & " - " & Err.Description
 
 End Sub
 
@@ -833,6 +833,6 @@ Public Sub Tani()
         metin = metin & vbNewLine & "SON DOSYA ACMA HATASI:" & vbNewLine & g_SonAcmaHatasi
     End If
 
-    MsgBox Sigdir(metin, MSG_SINIR), vbInformation, "Tani"
+    Bildir BS_BILGI, "Tani", Sigdir(metin, MSG_SINIR)
 
 End Sub

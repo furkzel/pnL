@@ -40,8 +40,13 @@ except Exception:
 
 def clean_log_sheets(s, wb) -> None:
     """A distribution workbook ships with header-only Rapor and Gecmis: the
-    KURULUM row written by SifirdanKur carries the builder's user names."""
-    for name in ("Rapor", "Gecmis"):
+    KURULUM row written by SifirdanKur carries the builder's user names.
+    The hidden Bellek sheet (notifications, pre-check fingerprints) is
+    emptied for the same reason; Yedek must not exist in a new workbook."""
+    names = [ws.Name for ws in wb.Worksheets]
+    for name in ("Rapor", "Gecmis", "Bellek"):
+        if name not in names:
+            continue
         ws = wb.Worksheets(name)
         ws.Unprotect()
         last = ws.UsedRange.Row + ws.UsedRange.Rows.Count - 1

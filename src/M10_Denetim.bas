@@ -527,7 +527,7 @@ Public Sub DenetimOzeti()
 
 Cikis:
     EkranAc
-    MsgBox "Denetim sayfasi olusturulamadi: " & Err.Number & " - " & Err.Description, vbExclamation, "Denetim"
+    Bildir BS_DIKKAT, "Denetim", "Denetim sayfasi olusturulamadi: " & Err.Number & " - " & Err.Description
 
 End Sub
 
@@ -544,15 +544,18 @@ Private Sub DenetimYaz()
 
     Dim ws As Worksheet, rpr As Worksheet
     Dim v As Variant
-    Dim aktifler As Sozluk, kDikkat As Sozluk, kEngel As Sozluk, kSon As Sozluk, gorulen As Sozluk
-    Dim son As Long, i As Long, n As Long, r As Long, sayac As Long
+    Dim aktifler As Sozluk, kDikkat As Sozluk, kEngel As Sozluk, kSon As Sozluk, gorulen As Sozluk, kararlar As Sozluk
+    Dim son As Long, i As Long, n As Long, r As Long, sayac As Long, rK As Long, rSurec As Long
     Dim toplamAktarim As Long, etkin As Long, geriAlinan As Long, tutuyor As Long, fark As Long
-    Dim satir As Double, tutar As Double
-    Dim no As String, kod As String, parcalar() As String, mut As String
-    Dim kSay As Long
-    Dim mutabakatOrani As Variant
+    Dim okSay As Long, okTemiz As Long, kararSay As Long, devamSay As Long
+    Dim kaliteSay As Long, sureOkSay As Long, sureAkSay As Long, sureYenSay As Long
+    Dim satir As Double, tutar As Double, kaliteToplam As Double, sureOk As Double, sureAk As Double, sureYen As Double
+    Dim dosyaMB As Double, yedekHucre As Double
+    Dim no As String, kod As String, parcalar() As String, mut As String, aciklama As String, metin As String
+    Dim mutabakatOrani As Variant, kaliteOrt As Variant
     Dim aylikSatir(0 To DN_TREND_AY - 1) As Double, aylikTutar(0 To DN_TREND_AY - 1) As Double
     Dim ilkAy As Date, ay As Long
+    Dim ilkTarih As Variant, sonTarih As Variant
 
     ilkAy = DateSerial(Year(Date), Month(Date) - DN_TREND_AY + 1, 1)
     RaporSayfasiHazirla
@@ -562,37 +565,74 @@ Private Sub DenetimYaz()
     Set kEngel = New Sozluk
     Set kSon = New Sozluk
     Set gorulen = New Sozluk
+    Set kararlar = New Sozluk
 
     son = rpr.Cells(rpr.Rows.Count, R_TARIH).End(xlUp).Row
     If son >= 2 Then
         v = IkiBoyutlu(rpr.Range(rpr.Cells(2, 1), rpr.Cells(son, R_SON)))
         For i = 1 To UBound(v, 1)
-            If GuvenliMetin(v(i, R_OLAY)) = "AKTARIM" Then
-                no = Trim$(GuvenliMetin(v(i, R_AKTARIM)))
-                If Not gorulen.Exists(no) Then
-                    gorulen.Item(no) = True
-                    toplamAktarim = toplamAktarim + 1
-                    If aktifler.Exists(no) Then
-                        etkin = etkin + 1
-                        satir = satir + GuvenliSayi(v(i, R_SATIR))
-                        If IsDate(v(i, R_TARIH)) Then
-                            ay = DateDiff("m", ilkAy, CDate(v(i, R_TARIH)))
-                            If ay >= 0 And ay < DN_TREND_AY Then
-                                aylikSatir(ay) = aylikSatir(ay) + GuvenliSayi(v(i, R_SATIR))
-                                If IsNumeric(v(i, R_AYLIK_TOPLAM)) Then aylikTutar(ay) = aylikTutar(ay) + CDbl(v(i, R_AYLIK_TOPLAM))
-                            End If
-                        End If
-                        If IsNumeric(v(i, R_AYLIK_TOPLAM)) And GuvenliMetin(v(i, R_AYLIK_TOPLAM)) <> "" Then
-                            tutar = tutar + CDbl(v(i, R_AYLIK_TOPLAM))
-                        End If
-                    Else
-                        geriAlinan = geriAlinan + 1
-                    End If
-                    mut = Left$(GuvenliMetin(v(i, R_MUTABAKAT)), 8)
-                    If mut = "TUTUYOR:" Then tutuyor = tutuyor + 1
-                    If mut = "FARK VAR" Then fark = fark + 1
-                End If
+            If IsDate(v(i, R_TARIH)) Then
+                If IsEmpty(ilkTarih) Then ilkTarih = v(i, R_TARIH)
+                sonTarih = v(i, R_TARIH)
             End If
+            Select Case GuvenliMetin(v(i, R_OLAY))
+                Case "AKTARIM"
+                    no = Trim$(GuvenliMetin(v(i, R_AKTARIM)))
+                    If Not gorulen.Exists(no) Then
+                        gorulen.Item(no) = True
+                        toplamAktarim = toplamAktarim + 1
+                        If aktifler.Exists(no) Then
+                            etkin = etkin + 1
+                            satir = satir + GuvenliSayi(v(i, R_SATIR))
+                            If IsDate(v(i, R_TARIH)) Then
+                                ay = DateDiff("m", ilkAy, CDate(v(i, R_TARIH)))
+                                If ay >= 0 And ay < DN_TREND_AY Then
+                                    aylikSatir(ay) = aylikSatir(ay) + GuvenliSayi(v(i, R_SATIR))
+                                    If IsNumeric(v(i, R_AYLIK_TOPLAM)) Then aylikTutar(ay) = aylikTutar(ay) + CDbl(v(i, R_AYLIK_TOPLAM))
+                                End If
+                            End If
+                            If IsNumeric(v(i, R_AYLIK_TOPLAM)) And GuvenliMetin(v(i, R_AYLIK_TOPLAM)) <> "" Then
+                                tutar = tutar + CDbl(v(i, R_AYLIK_TOPLAM))
+                            End If
+                            If IsNumeric(v(i, R_KALITE)) And GuvenliMetin(v(i, R_KALITE)) <> "" Then
+                                kaliteToplam = kaliteToplam + CDbl(v(i, R_KALITE))
+                                kaliteSay = kaliteSay + 1
+                            End If
+                        Else
+                            geriAlinan = geriAlinan + 1
+                        End If
+                        mut = Left$(GuvenliMetin(v(i, R_MUTABAKAT)), 8)
+                        If mut = "TUTUYOR:" Then tutuyor = tutuyor + 1
+                        If mut = "FARK VAR" Then fark = fark + 1
+                        If IsNumeric(v(i, R_SURE_MS)) And GuvenliMetin(v(i, R_SURE_MS)) <> "" Then
+                            sureAk = sureAk + CDbl(v(i, R_SURE_MS))
+                            sureAkSay = sureAkSay + 1
+                        End If
+                    End If
+                Case "KONTROL"
+                    aciklama = GuvenliMetin(v(i, R_ACIKLAMA))
+                    If Left$(aciklama, 12) = "On kontrol: " Then
+                        okSay = okSay + 1
+                        If InStr(aciklama, " 0 ENGEL, 0 DIKKAT") > 0 Then okTemiz = okTemiz + 1
+                        If IsNumeric(v(i, R_SURE_MS)) And GuvenliMetin(v(i, R_SURE_MS)) <> "" Then
+                            sureOk = sureOk + CDbl(v(i, R_SURE_MS))
+                            sureOkSay = sureOkSay + 1
+                        End If
+                    End If
+                Case "YENILE"
+                    If IsNumeric(v(i, R_SURE_MS)) And GuvenliMetin(v(i, R_SURE_MS)) <> "" Then
+                        sureYen = sureYen + CDbl(v(i, R_SURE_MS))
+                        sureYenSay = sureYenSay + 1
+                    End If
+                Case "DIKKAT"
+                    ' Onay ekrani karari (parti + panel basina bir karar)
+                    no = GuvenliMetin(v(i, R_PARTI)) & "|" & GuvenliMetin(v(i, R_PANEL)) & "|" & TarihMetni(v(i, R_TARIH))
+                    If Not kararlar.Exists(no) Then
+                        kararlar.Item(no) = True
+                        kararSay = kararSay + 1
+                        If Left$(GuvenliMetin(v(i, R_KARAR)), 7) = "Okundu," Then devamSay = devamSay + 1
+                    End If
+            End Select
             kod = Trim$(GuvenliMetin(v(i, R_KONTROL)))
             If kod <> "" Then
                 parcalar = Split(kod, " ")
@@ -610,65 +650,128 @@ Private Sub DenetimYaz()
 
     Set ws = SayfaOlustur(SAYFA_DENETIM)
     On Error Resume Next
+    ws.Unprotect
     ws.Cells.ClearOutline
     On Error GoTo 0
     ws.UsedRange.Clear
     ws.Cells.Font.Name = PANEL_YAZI_TIPI
     ws.Cells.Font.Size = YZ_GOVDE
+    ws.Cells.Font.Color = Palet(prMetin)
     ws.Columns(1).ColumnWidth = 2
-    ws.Range(ws.Columns(2), ws.Columns(13)).ColumnWidth = 14
-    ws.Columns(3).ColumnWidth = 26
-    ws.Columns(4).ColumnWidth = 22
+    ws.Range(ws.Columns(2), ws.Columns(13)).ColumnWidth = 12.5
+    ws.Columns(3).ColumnWidth = 22
 
+    ' --- Baslik ---
     With ws.Cells(2, 2)
-        .Value = TR("DENET#IM #OZET#I  #-  Aktar#im Paneli ") & SURUM
+        .Value = TR("DENET#IM #OZET#I")
         .Font.Size = YZ_BASLIK
         .Font.Bold = True
-        .Font.Color = Palet(prMarka)
     End With
-    ws.Cells(3, 2).Value = TR("Rapor ve Ge#cmi#s kay#itlar#indan #uretildi. Elle d#uzenlemeyin.")
-    If toplamAktarim = 0 Then ws.Cells(3, 2).Value = TR("Hen#uz aktar#im yok.")
+    With ws.Cells(2, 5)
+        .Value = TR("Aktar#im Paneli ") & SURUM & IIf(IsEmpty(ilkTarih), "", TR("   #*   kay#itlar ") & _
+                 Format$(ilkTarih, "dd.mm.yyyy") & " - " & Format$(sonTarih, "dd.mm.yyyy"))
+        .Font.Size = YZ_DIPNOT
+        .Font.Color = Palet(prIkincilMetin)
+    End With
+    ws.Cells(3, 2).Value = TR("Rapor ve Ge#cmi#s kay#itlar#indan her AKTAR ve Geri Al'dan sonra #uretilir; elle d#uzenlemeyin.")
+    If toplamAktarim = 0 Then ws.Cells(3, 2).Value = TR("Hen#uz aktar#im yok. #Ilk AKTAR'dan sonra bu sayfa dolar.")
+    ws.Cells(3, 2).Font.Size = YZ_DIPNOT
     ws.Cells(3, 2).Font.Color = Palet(prIkincilMetin)
 
-    ' --- KPI kartlari ---
-    KpiKart ws, 5, 2, TR("Aktar#im"), toplamAktarim, TR("toplam kay#it")
-    KpiKart ws, 5, 4, TR("Etkin"), etkin, TR("geri al#inmam#i#s")
-    KpiKart ws, 5, 6, TR("Geri al#inan"), geriAlinan, TR("aktar#im")
-    KpiKart ws, 5, 8, TR("Aktar#ilan sat#ir"), satir, TR("etkin aktar#imlar")
-    KpiKart ws, 5, 10, TR("Aktar#ilan tutar"), tutar, TR("etkin, kaynak toplam#i")
+    ' --- KPI kartlari (sayi; yerel bicim Excel'in NumberFormat cevirisiyle) ---
+    KpiKart ws, 5, 2, TR("Aktar#im"), toplamAktarim, "#,##0", TR("toplam kay#it"), Palet(prMetin)
+    KpiKart ws, 5, 4, TR("Etkin"), etkin, "#,##0", geriAlinan & TR(" geri al#ind#i"), Palet(prMetin)
+    KpiKart ws, 5, 6, TR("Aktar#ilan sat#ir"), satir, "#,##0", TR("etkin aktar#imlar"), Palet(prMetin)
+    KpiKart ws, 5, 8, TR("Aktar#ilan tutar"), tutar, "#,##0.00", TR("etkin, kaynak toplam#i"), Palet(prMetin)
     mutabakatOrani = Empty
     If tutuyor + fark > 0 Then mutabakatOrani = tutuyor / (tutuyor + fark)
-    KpiKart ws, 5, 12, "Mutabakat", mutabakatOrani, _
-            tutuyor & " TUTUYOR  " & ChrW(183) & "  " & fark & " FARK"
-    ws.Cells(6, 12).NumberFormat = "0%"
-    ws.Cells(6, 10).NumberFormat = "#,##0.00"
-    If fark > 0 Then ws.Cells(6, 12).Font.Color = Palet(prButonKirmizi)
+    KpiKart ws, 5, 10, "Mutabakat", mutabakatOrani, "0.0%", tutuyor & " TUTUYOR  " & ChrW(183) & "  " & fark & " FARK", _
+            IIf(fark > 0, Palet(prEngel), IIf(tutuyor > 0, Palet(prOk), Palet(prMetin)))
+    kaliteOrt = Empty
+    If kaliteSay > 0 Then kaliteOrt = Round(kaliteToplam / kaliteSay, 1)
+    KpiKart ws, 5, 12, TR("Veri kalitesi"), kaliteOrt, "0", TR("hedef ") & Format$(Esik(ekKaliteHedef), "0") & _
+            TR(", etkin aktar#im ort."), IIf(IsEmpty(kaliteOrt), Palet(prMetin), _
+            IIf(kaliteSay > 0 And kaliteToplam / IIf(kaliteSay > 0, kaliteSay, 1) >= Esik(ekKaliteHedef), Palet(prOk), Palet(prDikkat)))
 
-    ' --- Kontrol noktalari ---
+    ' --- K1..K14: adet ve bulgu orani (DN-04) ---
     r = 10
-    BaslikSatiri ws, r, Array("KONTROL NOKTASI", "", TR("D#IKKAT (adet)"), "ENGEL (adet)", TR("Son g#or#ulme"))
+    rK = r
+    ws.Cells(r, 2).Value = "KONTROL NOKTASI"
+    ws.Cells(r, 4).Value = TR("D#IKKAT")
+    ws.Cells(r, 5).Value = "ENGEL"
+    ws.Cells(r, 6).Value = TR("Bulgu / #cal#i#st#irma")
+    ws.Cells(r, 7).Value = TR("Son g#or#ulme")
+    TabloBasligiBicim ws.Range(ws.Cells(r, 2), ws.Cells(r, 7))
     ws.Range(ws.Cells(r, 2), ws.Cells(r, 3)).Merge
-    ws.Range(ws.Cells(r, 4), ws.Cells(r, 5)).HorizontalAlignment = xlRight
+    ws.Range(ws.Cells(r, 4), ws.Cells(r, 6)).HorizontalAlignment = xlRight
     For n = 1 To K_SAYI
         r = r + 1
         ws.Range(ws.Cells(r, 2), ws.Cells(r, 3)).Merge
         ws.Cells(r, 2).Value = "K" & n & "   " & KontrolAdi(n)
         ws.Cells(r, 4).Value = CLng(Val(GuvenliMetin(kDikkat.Item("K" & n))))
         ws.Cells(r, 5).Value = CLng(Val(GuvenliMetin(kEngel.Item("K" & n))))
-        ws.Cells(r, 6).Value = HucreMetni(GuvenliMetin(kSon.Item("K" & n)))
-        If ws.Cells(r, 5).Value > 0 Then ws.Cells(r, 5).Interior.Color = Palet(prDurumHata)
-        If ws.Cells(r, 4).Value > 0 Then ws.Cells(r, 4).Interior.Color = Palet(prDurumUyari)
-        ws.Range(ws.Cells(r, 2), ws.Cells(r, 6)).Borders(xlEdgeBottom).Color = Palet(prAyarKenar)
+        If okSay + toplamAktarim > 0 Then
+            ws.Cells(r, 6).Value = (ws.Cells(r, 4).Value + ws.Cells(r, 5).Value) / (okSay + toplamAktarim)
+        Else
+            ws.Cells(r, 6).Value = 0
+        End If
+        ws.Cells(r, 6).NumberFormat = "0%"
+        ws.Cells(r, 7).Value = HucreMetni(GuvenliMetin(kSon.Item("K" & n)))
+        ws.Cells(r, 7).Font.Color = Palet(prIkincilMetin)
+        If ws.Cells(r, 5).Value > 0 Then
+            ws.Cells(r, 5).Interior.Color = Palet(prEngelZemin): ws.Cells(r, 5).Font.Color = Palet(prEngel)
+        End If
+        If ws.Cells(r, 4).Value > 0 Then
+            ws.Cells(r, 4).Interior.Color = Palet(prDikkatZemin): ws.Cells(r, 4).Font.Color = Palet(prDikkat)
+        End If
+        ws.Range(ws.Cells(r, 2), ws.Cells(r, 7)).Borders(xlEdgeBottom).Color = Palet(prCizgi)
     Next n
+    VeriCubugu ws.Range(ws.Cells(rK + 1, 6), ws.Cells(r, 6))
 
-    ' --- Son 15 aktarim ---
-    r = r + 3
+    ' --- Surec metrikleri (INCELEME 3.5) ---
+    r = r + 2
+    rSurec = r
+    ws.Cells(r, 2).Value = TR("S#URE#C METR#IKLER#I")
+    ws.Cells(r, 4).Value = TR("DE#GER")
+    TabloBasligiBicim ws.Range(ws.Cells(r, 2), ws.Cells(r, 4))
+    ws.Range(ws.Cells(r, 2), ws.Cells(r, 3)).Merge
+    MetrikSatiri ws, r + 1, TR("#Ilk ge#ci#s verimi (bulgusuz #On Kontrol)"), Oran(okTemiz, okSay), "0%", okTemiz & " / " & okSay
+    MetrikSatiri ws, r + 2, TR("Ge#cersiz k#ilma (D#IKKAT'te devam)"), Oran(devamSay, kararSay), "0%", devamSay & " / " & kararSay
+    MetrikSatiri ws, r + 3, TR("Geri alma oran#i"), Oran(geriAlinan, toplamAktarim), "0%", geriAlinan & " / " & toplamAktarim
+    MetrikSatiri ws, r + 4, TR("Ortalama #On Kontrol (sn)"), Ortalama(sureOk, sureOkSay, 1000), "0.0", sureOkSay & TR(" #cal#i#st#irma")
+    MetrikSatiri ws, r + 5, TR("Ortalama AKTAR (sn)"), Ortalama(sureAk, sureAkSay, 1000), "0.0", sureAkSay & TR(" aktar#im")
+    MetrikSatiri ws, r + 6, TR("Ortalama Yenile (sn)"), Ortalama(sureYen, sureYenSay, 1000), "0.0", sureYenSay & TR(" #cal#i#st#irma")
+    dosyaMB = 0
+    On Error Resume Next
+    If ThisWorkbook.Path <> "" And InStr(ThisWorkbook.FullName, "://") = 0 Then dosyaMB = FileLen(ThisWorkbook.FullName) / 1048576
+    If SayfaVarMi(SAYFA_YEDEK) Then yedekHucre = Application.WorksheetFunction.CountA(ThisWorkbook.Worksheets(SAYFA_YEDEK).UsedRange)
+    On Error GoTo 0
+    MetrikSatiri ws, r + 7, TR("Dosya boyutu (MB, son kay#it)"), dosyaMB, "0.0", TR("uyar#i > ") & Format$(Esik(ekDosyaMB), "0")
+    If dosyaMB > Esik(ekDosyaMB) Then ws.Cells(r + 7, 4).Font.Color = Palet(prDikkat)
+    MetrikSatiri ws, r + 8, TR("Yedek (dolu h#ucre)"), yedekHucre, "#,##0", TR("son ") & Format$(Esik(ekYedekParti), "0") & " parti"
+
+    ' --- Esikler: varsayilandan farkli olanlar (denetci seffafligi) ---
+    ws.Cells(rSurec, 8).Value = TR("E#S#IKLER (varsay#ilandan farkl#i)")
+    TabloBasligiBicim ws.Range(ws.Cells(rSurec, 8), ws.Cells(rSurec, 13))
+    metin = EsikFarklari()
+    If metin = "" Then metin = TR("T#um e#sikler varsay#ilan de#gerinde (Ayarlar sayfas#i).")
+    With ws.Range(ws.Cells(rSurec + 1, 8), ws.Cells(rSurec + 8, 13))
+        .Merge
+        .Value = HucreMetni(metin)
+        .WrapText = True
+        .VerticalAlignment = xlTop
+        .Font.Size = YZ_DIPNOT
+        .Font.Color = Palet(prIkincilMetin)
+    End With
+
+    ' --- Son 10 aktarim ---
+    r = rSurec + 10
     BaslikSatiri ws, r, Array("TARIH", TR("KAYNAK (ayl#ik)"), "HEDEF (ana dosya)", "PANEL", "PARTI", _
-                              TR("AKTARIM NO"), TR("SATIR"), "AYLIK TOPLAM", "MUTABAKAT", "DURUM", TR("KULLANICI"))
-    ws.Range(ws.Cells(r, 5), ws.Cells(r, 9)).HorizontalAlignment = xlRight   ' sayi sutunlari
+                              TR("AKTARIM NO"), TR("SATIR"), "AYLIK TOPLAM", "MUTABAKAT", "DURUM", TR("KAL#ITE"), TR("KULLANICI"))
+    ws.Range(ws.Cells(r, 5), ws.Cells(r, 9)).HorizontalAlignment = xlRight
     If son >= 2 Then
         For i = UBound(v, 1) To 1 Step -1
-            If GuvenliMetin(v(i, R_OLAY)) = "AKTARIM" And sayac < 15 Then
+            If GuvenliMetin(v(i, R_OLAY)) = "AKTARIM" And sayac < 10 Then
                 sayac = sayac + 1
                 r = r + 1
                 no = Trim$(GuvenliMetin(v(i, R_AKTARIM)))
@@ -679,22 +782,28 @@ Private Sub DenetimYaz()
                 ws.Cells(r, 6).Value = v(i, R_PARTI)
                 ws.Cells(r, 7).Value = v(i, R_AKTARIM)
                 ws.Cells(r, 8).Value = v(i, R_SATIR)
+                ws.Cells(r, 8).NumberFormat = "#,##0"
                 ws.Cells(r, 9).Value = v(i, R_AYLIK_TOPLAM)
                 ws.Cells(r, 9).NumberFormat = "#,##0.00"
                 mut = Left$(GuvenliMetin(v(i, R_MUTABAKAT)), 8)
                 ws.Cells(r, 10).Value = IIf(mut = "TUTUYOR:", "TUTUYOR", IIf(mut = "FARK VAR", "FARK VAR", ChrW(8211)))
-                If mut = "TUTUYOR:" Then ws.Cells(r, 10).Interior.Color = Palet(prDurumHazir)
-                If mut = "FARK VAR" Then ws.Cells(r, 10).Interior.Color = Palet(prDurumHata)
+                If mut = "TUTUYOR:" Then ws.Cells(r, 10).Font.Color = Palet(prOk)
+                If mut = "FARK VAR" Then
+                    ws.Cells(r, 10).Interior.Color = Palet(prEngelZemin)
+                    ws.Cells(r, 10).Font.Color = Palet(prEngel)
+                End If
                 ws.Cells(r, 11).Value = IIf(aktifler.Exists(no), "ETKIN", "GERI ALINDI")
-                If Not aktifler.Exists(no) Then ws.Range(ws.Cells(r, 2), ws.Cells(r, 12)).Font.Color = Palet(prIkincilMetin)
-                ws.Cells(r, 12).Value = HucreMetni(GuvenliMetin(v(i, R_KULLANICI)))
-                ws.Range(ws.Cells(r, 2), ws.Cells(r, 12)).Borders(xlEdgeBottom).Color = Palet(prAyarKenar)
+                ws.Cells(r, 12).Value = v(i, R_KALITE)
+                ws.Cells(r, 12).NumberFormat = "0"
+                If Not aktifler.Exists(no) Then ws.Range(ws.Cells(r, 2), ws.Cells(r, 13)).Font.Color = Palet(prPasifMetin)
+                ws.Cells(r, 13).Value = HucreMetni(GuvenliMetin(v(i, R_KULLANICI)))
+                ws.Range(ws.Cells(r, 2), ws.Cells(r, 13)).Borders(xlEdgeBottom).Color = Palet(prCizgi)
             End If
         Next i
     End If
     If sayac = 0 Then ws.Cells(r + 1, 2).Value = TR("Hen#uz aktar#im yok.")
 
-    DenetimTrend ws, ilkAy, aylikSatir, aylikTutar
+    DenetimTrend ws, ilkAy, aylikSatir, aylikTutar, rK, rK + K_SAYI
     With ws.PageSetup
         .PaperSize = xlPaperA4
         .Orientation = xlLandscape
@@ -707,12 +816,61 @@ Private Sub DenetimYaz()
         .CenterFooter = "&P / &N"
     End With
     ws.Tab.Color = Palet(prMarka)
+    On Error Resume Next
+    ws.Protect UserInterfaceOnly:=True
+    On Error GoTo 0
 
 End Sub
 
 
+Private Function Oran(ByVal pay As Double, ByVal payda As Double) As Variant
+    If payda > 0 Then
+        Oran = pay / payda
+    Else
+        Oran = Empty
+    End If
+End Function
+
+
+Private Function Ortalama(ByVal toplam As Double, ByVal adet As Long, ByVal bolen As Double) As Variant
+    If adet > 0 Then
+        Ortalama = toplam / adet / bolen
+    Else
+        Ortalama = Empty
+    End If
+End Function
+
+
+Private Sub MetrikSatiri(ByVal ws As Worksheet, ByVal r As Long, ByVal ad As String, ByVal deger As Variant, _
+                         ByVal bicim As String, ByVal aciklama As String)
+    ws.Range(ws.Cells(r, 2), ws.Cells(r, 3)).Merge
+    ws.Cells(r, 2).Value = ad
+    ws.Cells(r, 4).Value2 = deger
+    ws.Cells(r, 4).NumberFormat = bicim
+    ws.Cells(r, 4).Font.Bold = True
+    ws.Cells(r, 5).Value = HucreMetni(aciklama)
+    ws.Cells(r, 5).Font.Size = YZ_DIPNOT
+    ws.Cells(r, 5).Font.Color = Palet(prIkincilMetin)
+    ws.Range(ws.Cells(r, 2), ws.Cells(r, 4)).Borders(xlEdgeBottom).Color = Palet(prCizgi)
+End Sub
+
+
+' DN-04: oran sutununa yerel veri cubugu (marka rengi, yalniz dolgu)
+Private Sub VeriCubugu(ByVal rng As Range)
+    Dim cubuk As Object
+    On Error Resume Next
+    rng.FormatConditions.Delete
+    Set cubuk = rng.FormatConditions.AddDatabar
+    cubuk.MinPoint.Modify newtype:=xlConditionValueNumber, newvalue:=0
+    cubuk.MaxPoint.Modify newtype:=xlConditionValueNumber, newvalue:=1
+    cubuk.BarColor.Color = Palet(prMarkaZemin)
+    cubuk.BarFillType = 0
+    On Error GoTo 0
+End Sub
+
+
 Private Sub KpiKart(ByVal ws As Worksheet, ByVal r As Long, ByVal c As Long, ByVal baslik As String, _
-                    ByVal deger As Variant, ByVal alt As String)
+                    ByVal deger As Variant, ByVal bicim As String, ByVal alt As String, ByVal renk As Long)
 
     Dim rng As Range
 
@@ -730,12 +888,14 @@ Private Sub KpiKart(ByVal ws As Worksheet, ByVal r As Long, ByVal c As Long, ByV
     With ws.Range(ws.Cells(r + 1, c), ws.Cells(r + 1, c + 1))
         .Merge
         .Value2 = deger
-        .NumberFormat = "#,##0"
+        .NumberFormat = bicim
+        .HorizontalAlignment = xlLeft
         .Font.Size = YZ_GOSTERGE
         .Font.Bold = True
-        .Font.Color = Palet(prMetin)
+        .Font.Color = renk
         .IndentLevel = 1
     End With
+    If IsEmpty(deger) Then ws.Cells(r + 1, c).Value = ChrW(8211)
     ws.Rows(r + 1).RowHeight = 26
     With ws.Range(ws.Cells(r + 2, c), ws.Cells(r + 2, c + 1))
         .Merge
@@ -753,30 +913,28 @@ Private Sub BaslikSatiri(ByVal ws As Worksheet, ByVal r As Long, ByVal basliklar
     For i = 0 To UBound(basliklar)
         ws.Cells(r, 2 + i).Value = basliklar(i)
     Next i
-    With ws.Range(ws.Cells(r, 2), ws.Cells(r, 2 + UBound(basliklar)))
-        .Font.Bold = True
-        .Font.Color = Palet(prZemin)
-        .Interior.Color = Palet(prBlokBaslik)
-    End With
+    TabloBasligiBicim ws.Range(ws.Cells(r, 2), ws.Cells(r, 2 + UBound(basliklar)))
 End Sub
 
-Private Sub DenetimTrend(ByVal ws As Worksheet, ByVal ilkAy As Date, satir() As Double, tutar() As Double)
+Private Sub DenetimTrend(ByVal ws As Worksheet, ByVal ilkAy As Date, satir() As Double, tutar() As Double, _
+                         ByVal ustSatir As Long, ByVal altSatir As Long)
     Dim i As Long, r As Long, c As Long, grafik As ChartObject
     r = DN_TREND_SATIR: c = DN_TREND_SUTUN
     For i = ws.ChartObjects.Count To 1 Step -1
         If ws.ChartObjects(i).Name = DN_TREND_GRAFIK Then ws.ChartObjects(i).Delete
     Next i
     ws.Cells(r, c).Value = "AY"
-    ws.Cells(r, c + 1).Value = "SATIR"
-    ws.Cells(r, c + 2).Value = "TUTAR"
+    ws.Cells(r, c + 1).Value = TR("Aktar#ilan sat#ir")
+    ws.Cells(r, c + 2).Value = TR("Tutar")
     For i = 0 To DN_TREND_AY - 1
         ws.Cells(r + i + 1, c).Value = DateAdd("m", i, ilkAy)
         ws.Cells(r + i + 1, c).NumberFormat = "mmm yy"
         ws.Cells(r + i + 1, c + 1).Value2 = satir(i)
         ws.Cells(r + i + 1, c + 2).Value2 = tutar(i)
     Next i
-    Set grafik = ws.ChartObjects.Add(ws.Cells(r, DN_TREND_GRAFIK_SUTUN).Left, ws.Cells(r, DN_TREND_GRAFIK_SUTUN).Top, _
-                  ws.Range(ws.Cells(r, DN_TREND_GRAFIK_SUTUN), ws.Cells(r, 13)).Width, ws.Rows(r).Height * 9)
+    Set grafik = ws.ChartObjects.Add(ws.Cells(ustSatir, DN_TREND_GRAFIK_SUTUN).Left + 6, ws.Cells(ustSatir, DN_TREND_GRAFIK_SUTUN).Top, _
+                  ws.Range(ws.Cells(ustSatir, DN_TREND_GRAFIK_SUTUN), ws.Cells(ustSatir, 13)).Width - 6, _
+                  ws.Range(ws.Cells(ustSatir, 1), ws.Cells(altSatir, 1)).Height)
     grafik.Name = DN_TREND_GRAFIK
     With grafik.Chart
         .ChartType = xlColumnClustered
@@ -784,11 +942,15 @@ Private Sub DenetimTrend(ByVal ws As Worksheet, ByVal ilkAy As Date, satir() As 
         .SeriesCollection(2).ChartType = xlLine
         .SeriesCollection(2).AxisGroup = xlSecondary
         .SeriesCollection(1).Format.Fill.ForeColor.RGB = Palet(prMarka)
-        .SeriesCollection(2).Format.Line.ForeColor.RGB = Palet(prOneriMetin)
+        .SeriesCollection(2).Format.Line.ForeColor.RGB = Palet(prIkincilMetin)
+        .SeriesCollection(2).Format.Line.Weight = 2
         .HasTitle = True
-        .ChartTitle.Text = TR("Son 12 ay #* etkin aktar#imlar")
+        .ChartTitle.Text = TR("Son 12 ay  #*  etkin aktar#imlar (s#utun: sat#ir, #cizgi: tutar)")
+        .ChartTitle.Font.Size = YZ_GOVDE
+        .ChartTitle.Font.Bold = True
         .ChartArea.Font.Name = PANEL_YAZI_TIPI
         .ChartArea.Font.Size = YZ_DIPNOT
+        .ChartArea.Format.Line.Visible = 0
         .PlotVisibleOnly = False
         .Legend.Position = xlLegendPositionBottom
     End With

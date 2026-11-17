@@ -636,10 +636,7 @@ Public Sub ButonlariYenile()
     Dim hata As String
 
     Set pnl = PanelSayfasi()
-    If pnl Is Nothing Then
-        MsgBox "Panel sayfasi yok. Once 'SifirdanKur' calistir.", vbExclamation
-        Exit Sub
-    End If
+    If Not PanelHazirMi(pnl) Then Exit Sub
 
     EkranKilitle
     On Error GoTo Cikis
@@ -648,9 +645,9 @@ Cikis:
     If Err.Number <> 0 Then hata = Err.Number & " - " & Err.Description
     EkranAc
     If hata <> "" Then
-        MsgBox "Butonlar kurulamadi: " & hata, vbExclamation
+        Bildir BS_DIKKAT, "Aktarim Paneli", "Butonlar kurulamadi: " & hata
     Else
-        MsgBox "Butonlar yeniden olusturuldu.", vbInformation
+        Bildir BS_OK, "Aktarim Paneli", "Butonlar yeniden olusturuldu."
     End If
 
 End Sub
@@ -1091,10 +1088,7 @@ Public Sub YeniPanelEkle()
     Dim k As Long, i As Long, ornek As Long
 
     Set pnl = PanelSayfasi()
-    If pnl Is Nothing Then
-        MsgBox "Panel sayfasi yok. Once 'SifirdanKur' calistir.", vbExclamation
-        Exit Sub
-    End If
+    If Not PanelHazirMi(pnl) Then Exit Sub
 
     k = 0
     For i = 1 To BlokSayisi(pnl)
@@ -1107,7 +1101,7 @@ Public Sub YeniPanelEkle()
     If k = 0 Then
         k = BlokSayisi(pnl) + 1
         If k > MAX_BLOK Then
-            MsgBox "En fazla " & MAX_BLOK & " panel blogu desteklenir.", vbExclamation
+            Bildir BS_DIKKAT, "Aktarim Paneli", "En fazla " & MAX_BLOK & " panel blogu desteklenir."
             Exit Sub
         End If
     End If
@@ -1147,15 +1141,15 @@ Public Sub YeniPanelEkle()
 
     OlayYaz "PANEL EKLE", k, 0, 0, "PANEL " & k & " eklendi", ""
 
-    MsgBox "PANEL " & k & " eklendi." & vbNewLine & vbNewLine & _
+    Bildir BS_OK, "Aktarim Paneli", "PANEL " & k & " eklendi." & vbNewLine & vbNewLine & _
            IIf(ornek > 0, "Hedef ayarlari PANEL " & ornek & "'den kopyalandi." & vbNewLine, "") & _
-           "Kaynak dosyayi ve sayfayi secip 'YENILE' calistir.", vbInformation
+           "Kaynak dosyayi ve sayfayi secip 'YENILE' calistir."
     Exit Sub
 
 Hata:
     EkranAc
-    MsgBox "PANEL EKLENEMEDI" & vbNewLine & vbNewLine & _
-           "Hata : " & Err.Number & " - " & Err.Description, vbCritical, "Panel Ekle"
+    Bildir BS_ENGEL, "Panel Ekle", "PANEL EKLENEMEDI" & vbNewLine & vbNewLine & _
+           "Hata : " & Err.Number & " - " & Err.Description
 
 End Sub
 
@@ -1171,8 +1165,8 @@ Public Sub PanelKaldir()
     adet = BlokSayisi(pnl)
 
     If GorunurBlokSayisi(pnl) <= 1 Then
-        MsgBox "Tek panel kaldi, kaldirilamaz." & vbNewLine & _
-               "Icerigini temizlemek istiyorsan 'PanelKur' calistir.", vbExclamation
+        Bildir BS_DIKKAT, "Aktarim Paneli", "Tek panel kaldi, kaldirilamaz." & vbNewLine & _
+               "Icerigini temizlemek istiyorsan 'PanelKur' calistir."
         Exit Sub
     End If
 
@@ -1183,17 +1177,17 @@ Public Sub PanelKaldir()
                            "Panel Kaldir", CStr(AktifBlok())))
     If cevap = "" Then Exit Sub
     If Not IsNumeric(cevap) Then
-        MsgBox "Gecerli bir panel numarasi yaz.", vbExclamation
+        Bildir BS_DIKKAT, "Aktarim Paneli", "Gecerli bir panel numarasi yaz."
         Exit Sub
     End If
 
     k = CLng(cevap)
     If k < 1 Or k > adet Then
-        MsgBox "1 - " & adet & " arasi bir numara olmali.", vbExclamation
+        Bildir BS_DIKKAT, "Aktarim Paneli", "1 - " & adet & " arasi bir numara olmali."
         Exit Sub
     End If
     If BlokGizliMi(pnl, k) Then
-        MsgBox "PANEL " & k & " zaten kaldirilmis.", vbInformation
+        Bildir BS_BILGI, "Aktarim Paneli", "PANEL " & k & " zaten kaldirilmis."
         Exit Sub
     End If
 
@@ -1225,14 +1219,14 @@ Public Sub PanelKaldir()
     OlayYaz "PANEL KALDIR", k, 0, 0, "PANEL " & k & " kaldirildi (gizlendi). Kaynak: " & kaynakAdi, ""
     PaneleGit KomsuBlok(pnl, k, -1)
 
-    MsgBox "PANEL " & k & " kaldirildi." & vbNewLine & vbNewLine & _
+    Bildir BS_OK, "Aktarim Paneli", "PANEL " & k & " kaldirildi." & vbNewLine & vbNewLine & _
            "Diger panellerin numarasi degismedi." & vbNewLine & _
-           "'+ Panel' bu yeri yeniden kullanir.", vbInformation
+           "'+ Panel' bu yeri yeniden kullanir."
     Exit Sub
 
 Hata:
     EkranAc
-    MsgBox "PANEL KALDIRMA SIRASINDA HATA" & vbNewLine & vbNewLine & _
-           "Hata : " & Err.Number & " - " & Err.Description, vbCritical, "Hata"
+    Bildir BS_ENGEL, "Hata", "PANEL KALDIRMA SIRASINDA HATA" & vbNewLine & vbNewLine & _
+           "Hata : " & Err.Number & " - " & Err.Description
 
 End Sub

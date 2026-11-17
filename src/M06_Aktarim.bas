@@ -179,9 +179,9 @@ Public Sub Aktar()
     Next k
 
     If secilenSayi = 0 Then
-        MsgBox "Aktarilacak panel secilmemis." & vbNewLine & vbNewLine & _
+        Bildir BS_DIKKAT, "Aktarim Paneli", "Aktarilacak panel secilmemis." & vbNewLine & vbNewLine & _
                "Aktarmak istedigin panellerde 'Bu paneli aktar' hucresini" & vbNewLine & _
-               "'Evet' yap, sonra tekrar dene.", vbExclamation
+               "'Evet' yap, sonra tekrar dene."
         Exit Sub
     End If
 
@@ -200,25 +200,15 @@ Public Sub Aktar()
         k = secili(i)
         sonuc = AktarCalistir(k, False, partiNo, i, secilenSayi)
 
-        Select Case sonuc
-            Case asTamam
-                basarili = basarili + 1
-                If i < secilenSayi Then
-                    If MsgBox(i & ". panel aktarildi." & vbNewLine & vbNewLine & _
-                              "Siradaki: PANEL " & secili(i + 1) & vbNewLine & _
-                              "Devam edilsin mi?", vbYesNo + vbQuestion, "Sirali aktarim") <> vbYes Then Exit For
-                End If
-            Case asIptal
-                If i < secilenSayi Then
-                    If MsgBox("PANEL " & k & " aktarilmadi (iptal)." & vbNewLine & vbNewLine & _
-                              "Kalan panellere devam edilsin mi?", vbYesNo + vbQuestion, "Sirali aktarim") <> vbYes Then Exit For
-                End If
-            Case Else
-                If i < secilenSayi Then
-                    If MsgBox("PANEL " & k & " aktarilamadi." & vbNewLine & vbNewLine & _
-                              "Kalan panellere devam edilsin mi?", vbYesNo + vbExclamation, "Sirali aktarim") <> vbYes Then Exit For
-                End If
-        End Select
+        ' Basarili panelden sonra soru yok: siradaki panelin kendi onay
+        ' ekrani zaten var. Yalnizca iptal / engel sonrasi karar sorulur.
+        If sonuc = asTamam Then
+            basarili = basarili + 1
+        ElseIf i < secilenSayi Then
+            If MsgBox("PANEL " & k & IIf(sonuc = asIptal, " aktarilmadi (iptal).", " aktarilamadi (ENGEL / hata).") & _
+                      vbNewLine & vbNewLine & "Kalan panellere (" & (secilenSayi - i) & ") devam edilsin mi?", _
+                      vbYesNo + vbQuestion + vbDefaultButton2, "Sirali aktarim") <> vbYes Then Exit For
+        End If
     Next i
 
     If basarili > 0 Then
@@ -226,7 +216,7 @@ Public Sub Aktar()
         DenetimSessiz
     End If
 
-    MsgBox "SIRALI AKTARIM BITTI" & vbNewLine & vbNewLine & _
+    Bildir BS_OK, "Aktarim", "SIRALI AKTARIM BITTI" & vbNewLine & vbNewLine & _
            "Parti no           : " & partiNo & vbNewLine & _
            "Secilen panel      : " & secilenSayi & vbNewLine & _
            "Aktarilan panel    : " & basarili & vbNewLine & vbNewLine & _
@@ -235,7 +225,7 @@ Public Sub Aktar()
            "HATIRLATMA: Ana dosyayi SIMDI kaydet, sonra bu paneli de kaydet." & vbNewLine & vbNewLine & _
            "Hepsini birden geri almak icin 'Geri Al' calistirip" & vbNewLine & _
            "'parti' secenegini sec." & vbNewLine & vbNewLine & _
-           "Yonetici ozeti: Denetim sayfasi (guncellendi).", vbInformation, "Aktarim"
+           "Yonetici ozeti: Denetim sayfasi (guncellendi)."
 
 End Sub
 
@@ -870,11 +860,11 @@ End Function
 
 Private Sub EngelBildir(ByRef p As AktarimPlani)
 
-    MsgBox "AKTARIM YAPILAMAZ  -  PANEL " & p.k & vbNewLine & vbNewLine & _
+    Bildir BS_ENGEL, "Engel", "AKTARIM YAPILAMAZ  -  PANEL " & p.k & vbNewLine & vbNewLine & _
            "KONTROL NOKTALARI:" & vbNewLine & KarneSatiri(p.kDurum) & vbNewLine & vbNewLine & _
            MaddeKisalt(p.engel, 650) & vbNewLine & _
            "Hicbir sey yazilmadi. Sorunu giderip tekrar dene." & vbNewLine & _
-           "(Ipucu: 'On Kontrol' butun sorunlari tek seferde listeler.)", vbCritical, "Engel"
+           "(Ipucu: 'On Kontrol' butun sorunlari tek seferde listeler.)"
 
     MaddeleriRaporaYaz p, p.engel, "ENGEL", "Aktarim yapilmadi", KD_ENGEL
     KarneYaz p.pnl, p.k, p.kDurum, TR("4 AKTAR: ENGEL, hi#cbir #sey yaz#ilmad#i  (") & Format$(Now, "dd.mm hh:nn") & ")"
@@ -2134,7 +2124,7 @@ Private Sub Yaz(ByRef p As AktarimPlani)
     End If
 
     If p.toplam = 1 Then
-        MsgBox "PANEL " & p.k & IIf(p.yama, " YAMASI", "") & " aktarildi." & vbNewLine & vbNewLine & _
+        Bildir BS_OK, "Aktarim", "PANEL " & p.k & IIf(p.yama, " YAMASI", "") & " aktarildi." & vbNewLine & vbNewLine & _
                "Parti no        : " & p.partiNo & vbNewLine & _
                "Aktarim no      : " & aktarimNo & vbNewLine & _
                "Aktarilan satir : " & SayiMetni(n) & "   (ana dosya " & SayiMetni(p.enKucukBas) & " - " & _
@@ -2152,7 +2142,7 @@ Private Sub Yaz(ByRef p As AktarimPlani)
                    "   (tutar sutunu secilmemis)" & vbNewLine) & vbNewLine & _
                "HATIRLATMA: Ana dosyayi SIMDI kaydet, sonra bu paneli de kaydet." & vbNewLine & _
                "Ikisi birlikte kaydedilmezse Gecmis kaydi ile dosyanin" & vbNewLine & _
-               "gercek durumu birbirinden ayrisir.", vbInformation, "Aktarim"
+               "gercek durumu birbirinden ayrisir."
     End If
 
 End Sub
@@ -3337,20 +3327,20 @@ Public Sub KontrolTemizle()
     If Not PanelHazirMi(pnl) Then Exit Sub
     Set hedefWs = BlokHedefSayfasi(pnl, AktifBlok())
     If hedefWs Is Nothing Then
-        MsgBox "Hedef dosya/sayfa bulunamadi.", vbExclamation
+        Bildir BS_DIKKAT, "Aktarim Paneli", "Hedef dosya/sayfa bulunamadi."
         Exit Sub
     End If
 
     EkranKilitle
     If EskiKontrolIzleriniSil(hedefWs) Then
         EkranAc
-        MsgBox "Eski kontrol izleri temizlendi (filtre ve olcut hucreleri)." & vbNewLine & _
-               hedefWs.Parent.Name & " / " & hedefWs.Name, vbInformation
+        Bildir BS_OK, "Aktarim Paneli", "Eski kontrol izleri temizlendi (filtre ve olcut hucreleri)." & vbNewLine & _
+               hedefWs.Parent.Name & " / " & hedefWs.Name
     Else
         EkranAc
-        MsgBox "TEMIZLEME TAM YAPILAMADI" & vbNewLine & vbNewLine & _
+        Bildir BS_DIKKAT, "Aktarim Paneli", "TEMIZLEME TAM YAPILAMADI" & vbNewLine & vbNewLine & _
                "Filtre veya gecici olcut hucreleri hala duruyor." & vbNewLine & _
-               "Sayfa korumali olabilir (Review > Unprotect Sheet).", vbExclamation
+               "Sayfa korumali olabilir (Review > Unprotect Sheet)."
     End If
 
 End Sub

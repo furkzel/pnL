@@ -174,3 +174,4 @@ vbnull
 vberror
 eof
 xlinsidehorizontal
+xlconditionvaluenumber

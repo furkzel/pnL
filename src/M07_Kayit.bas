@@ -52,7 +52,7 @@ Public Sub GeriAl()
 
     gecSon = gec.Cells(gec.Rows.Count, G_PARTI).End(xlUp).Row
     If gecSon < 2 Then
-        MsgBox "Gecmis kaydi yok, geri alinacak aktarim bulunamadi.", vbInformation
+        Bildir BS_BILGI, "Aktarim Paneli", "Gecmis kaydi yok, geri alinacak aktarim bulunamadi."
         Exit Sub
     End If
     v = IkiBoyutlu(gec.Range(gec.Cells(2, 1), gec.Cells(gecSon, G_SON_SUTUN)))
@@ -64,7 +64,7 @@ Public Sub GeriAl()
         End If
     Next i
     If sonParti = 0 Then
-        MsgBox "Geri alinabilecek aktif aktarim yok.", vbInformation
+        Bildir BS_BILGI, "Aktarim Paneli", "Geri alinabilecek aktif aktarim yok."
         Exit Sub
     End If
     For i = 1 To UBound(v, 1)
@@ -185,8 +185,8 @@ Public Sub GeriAl()
     End If
 
     If secilenSay = 0 Then
-        MsgBox "Geri alinacak kayit bulunamadi." & vbNewLine & _
-               "Panelde SEC isareti koyduysan, o sutunlar son aktarimda olmayabilir.", vbInformation
+        Bildir BS_BILGI, "Aktarim Paneli", "Geri alinacak kayit bulunamadi." & vbNewLine & _
+               "Panelde SEC isareti koyduysan, o sutunlar son aktarimda olmayabilir."
         Exit Sub
     End If
 
@@ -262,7 +262,7 @@ Public Sub GeriAl()
 
     DenetimSessiz
 
-    MsgBox "Geri alma tamamlandi." & vbNewLine & vbNewLine & _
+    Bildir BS_OK, "Geri Al", "Geri alma tamamlandi." & vbNewLine & vbNewLine & _
            "Geri alinan sutun        : " & temizlenen & IIf(geriYuklenen > 0, "  (" & geriYuklenen & " tanesi yedekten geri yuklendi)", "") & vbNewLine & _
            "Satir araligi            : " & enKucukIlk & " - " & enBuyukSon & vbNewLine & _
            "Ana dosya : " & DosyaAdiGuvenli(sonHedefWb) & " / " & SayfaAdiGuvenli(sonHedefWs) & vbNewLine & _
@@ -272,7 +272,7 @@ Public Sub GeriAl()
            "2. Yazim baslangici 'Geri alinan araliga' (bosalan yere yazar)." & vbNewLine & _
            "3. Tum sutunlar icin AKTAR; yalnizca bazi sutunlar icin" & vbNewLine & _
            "   ISLEM = SEC yapip 'Secili Sutun Yamasi'." & vbNewLine & vbNewLine & _
-           "HATIRLATMA: Ana dosyayi ve paneli kaydet.", vbInformation, "Geri Al"
+           "HATIRLATMA: Ana dosyayi ve paneli kaydet."
     Exit Sub
 
 Hata:
@@ -615,6 +615,14 @@ Public Sub GecmisSayfasiHazirla()
             gec.Columns(i + 1).ColumnWidth = 16
         End If
     Next i
+    If GuvenliMetin(gec.Cells(1, G_DURUM).Value) <> TR("DURUM") Or GuvenliMetin(gec.Cells(1, G_TARIH).Value) <> TR("TAR#IH") Then
+        basliklar = Array("PART#I", "AKTARIM NO", "TAR#IH", "HEDEF DOSYA", "HEDEF SAYFA", "HEDEF S#UTUN", _
+                          "KAYNAK S#UTUN", "#ILK SATIR", "SON SATIR", "SATIR SAYISI", "DURUM", _
+                          "GER#I ALMA TAR#IH#I", "HEDEF S#UTUN ADI", "KULLANICI", "#IMZA", "YEDEK")
+        For i = 0 To UBound(basliklar)
+            gec.Cells(1, i + 1).Value = TR(CStr(basliklar(i)))
+        Next i
+    End If
     With gec.Range(gec.Cells(1, 1), gec.Cells(1, G_SON_SUTUN))
         .Font.Bold = True
         .Interior.Color = Palet(prTabloBaslik)
@@ -942,7 +950,30 @@ Public Sub RaporSayfasiHazirla()
     If Trim$(GuvenliMetin(rpr.Cells(1, R_KAYNAK_YOL).Value)) = "" Then
         RaporV11Basliklari rpr
     End If
+    ' SY-04: gorunen basliklar Turkce (ic sutun numaralari degismez)
+    If GuvenliMetin(rpr.Cells(1, R_ACIKLAMA).Value) <> TR("A#CIKLAMA") Then RaporBasliklariTR rpr
 
+End Sub
+
+
+Private Sub RaporBasliklariTR(ByVal rpr As Worksheet)
+    Dim basliklar As Variant
+    Dim i As Long
+    basliklar = Array("TAR#IH", "KULLANICI", "OLAY", "PANEL", "PART#I", "AKTARIM NO", "A#CIKLAMA", "KARAR / SONU#C", _
+                      "KAYNAK DOSYA", "KAYNAK SAYFA", "HEDEF DOSYA", "HEDEF SAYFA", "KAYNAK SON SATIR", _
+                      "AKTARILAN SATIR", "S#UTUN SAYISI", "HEDEF #ILK SATIR", "HEDEF SON SATIR", "F#ILTRE", _
+                      "SAB#IT DE#GER", "TUTAR MUTABAKATI", "AYLIK DOSYA TOPLAMI", "TUTAR HEDEF S#UTUN", _
+                      "EXCEL KULLANICI ADI", "HEDEFE YAZILAN TOPLAM", "HEDEF #ONCEK#I TOPLAM", "HEDEF YEN#I TOPLAM", _
+                      "KONTROL NOKTASI", "KAYNAK YOL", "KAYNAK BOYUT (bayt)", "KAYNAK DE#G#I#ST#IR#ILME", _
+                      "KAYNAK KARMA", "#I#CER#IK #IZ#I", "S#URE (ms)", "ADET MUTABAKATI", "KAL#ITE", "METR#IKLER")
+    For i = 0 To UBound(basliklar)
+        rpr.Cells(1, i + 1).Value = TR(CStr(basliklar(i)))
+    Next i
+    rpr.Cells(1, R_TARIH).NumberFormat = "@"
+    With rpr.Range(rpr.Cells(1, 1), rpr.Cells(1, R_SON))
+        .Font.Bold = True
+        .Interior.Color = Palet(prTabloBaslik)
+    End With
 End Sub
 
 
@@ -1318,7 +1349,7 @@ Public Sub TutarMutabakatiSon()
     Set rpr = ThisWorkbook.Worksheets(SAYFA_RAPOR)
     son = rpr.Cells(rpr.Rows.Count, R_TARIH).End(xlUp).Row
     If son < 2 Then
-        MsgBox "Rapor kaydi yok; once bir aktarim yapilmali.", vbInformation
+        Bildir BS_BILGI, "Aktarim Paneli", "Rapor kaydi yok; once bir aktarim yapilmali."
         Exit Sub
     End If
 
@@ -1341,13 +1372,13 @@ Public Sub TutarMutabakatiSon()
 
     If sonParti = 0 Then
         If Not aktarimVar Then
-            MsgBox "Henuz hic aktarim yapilmamis.", vbInformation, "Tutar Mutabakati"
+            Bildir BS_BILGI, "Tutar Mutabakati", "Henuz hic aktarim yapilmamis."
         ElseIf Not tutarliVar Then
-            MsgBox "Son aktarimlarda tutar sutunu secilmemis." & vbNewLine & _
+            Bildir BS_DIKKAT, "Tutar Mutabakati", "Son aktarimlarda tutar sutunu secilmemis." & vbNewLine & _
                    "Panelde 'Tutar sutunu (mutabakat)' secip aktarim yaparsan" & vbNewLine & _
-                   "bu kontrol calisir.", vbExclamation, "Tutar Mutabakati"
+                   "bu kontrol calisir."
         Else
-            MsgBox "Kontrol edilecek ETKIN bir aktarim yok (hepsi geri alinmis).", vbInformation, "Tutar Mutabakati"
+            Bildir BS_BILGI, "Tutar Mutabakati", "Kontrol edilecek ETKIN bir aktarim yok (hepsi geri alinmis)."
         End If
         Exit Sub
     End If
