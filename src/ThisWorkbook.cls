@@ -12,7 +12,10 @@
 Option Explicit
 
 Private Sub Workbook_Open()
-    On Error Resume Next
+    On Error GoTo Hata
     UygulamaDurumunuOnar
-    On Error GoTo 0
+    KorumalariUygula
+    Exit Sub
+Hata:
+    MsgBox "Acilis / koruma hatasi: " & Err.Number & " - " & Err.Description, vbExclamation
 End Sub

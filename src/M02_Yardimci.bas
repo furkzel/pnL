@@ -1342,7 +1342,7 @@ Public Function HucreRengi(ByVal hucre As Range, ByRef renk As Long) As Boolean
     Dim ci As Variant
 
     HucreRengi = False
-    renk = RGB(255, 255, 255)
+    renk = Palet(prZemin)
 
     On Error Resume Next
     ci = hucre.DisplayFormat.Interior.ColorIndex
@@ -1363,7 +1363,7 @@ Public Function HucreRengi(ByVal hucre As Range, ByRef renk As Long) As Boolean
     Err.Clear
     On Error GoTo 0
 
-    If renk = RGB(255, 255, 255) Then HucreRengi = False
+    If renk = Palet(prZemin) Then HucreRengi = False
 
 End Function
 

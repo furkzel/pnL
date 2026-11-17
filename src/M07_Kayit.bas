@@ -393,7 +393,7 @@ End Function
 Private Function YedekSayfasi() As Worksheet
     Dim ws As Worksheet
     Set ws = SayfaOlustur(SAYFA_YEDEK)
-    If ws.Visible <> xlSheetHidden Then ws.Visible = xlSheetHidden
+    If ws.Visible <> xlSheetVeryHidden Then ws.Visible = xlSheetVeryHidden
     Set YedekSayfasi = ws
 End Function
 
@@ -964,13 +964,13 @@ End Sub
 
 Public Function OlayRengi(ByVal olay As String) As Long
     Select Case olay
-        Case "AKTARIM":                         OlayRengi = RGB(220, 252, 231)
-        Case "DIKKAT", "UYARI", "SATIR EKLEME": OlayRengi = RGB(254, 243, 199)
-        Case "ENGEL", "HATA":                   OlayRengi = RGB(254, 202, 202)
-        Case "GERI ALMA":                       OlayRengi = RGB(219, 234, 254)
-        Case "KONTROL", "MUTABAKAT":            OlayRengi = RGB(237, 233, 254)
-        Case "IPTAL":                           OlayRengi = RGB(241, 245, 249)
-        Case Else:                              OlayRengi = RGB(255, 255, 255)
+        Case "AKTARIM":                         OlayRengi = Palet(prOkZemin)
+        Case "DIKKAT", "UYARI", "SATIR EKLEME": OlayRengi = Palet(prDikkatZemin)
+        Case "ENGEL", "HATA":                   OlayRengi = Palet(prEngelZemin)
+        Case "GERI ALMA":                       OlayRengi = Palet(prMarkaZemin)
+        Case "KONTROL", "MUTABAKAT":            OlayRengi = Palet(prOneriZemin)
+        Case "IPTAL":                           OlayRengi = Palet(prYuzey)
+        Case Else:                              OlayRengi = Palet(prZemin)
     End Select
 End Function
 

@@ -132,7 +132,7 @@ Private Sub KBaslikAlani(ByVal ws As Worksheet)
         .Value = TR("AKTARIM PANEL#I  #-  KULLANIM KILAVUZU")
         .Font.Size = 20
         .Font.Bold = True
-        .Font.Color = RGB(29, 78, 216)
+        .Font.Color = Palet(prMarka)
     End With
     ws.Rows(2).RowHeight = 34
 
@@ -140,7 +140,7 @@ Private Sub KBaslikAlani(ByVal ws As Worksheet)
         .Value = TR("Ayl#ik hasar dosyalar#in#i (#odenen / muallak) birikimli ana dosyalara e#sleme ile aktaran ara#c" & _
                     "   #*   S#ur#um " & SURUM)
         .Font.Italic = True
-        .Font.Color = RGB(71, 85, 105)
+        .Font.Color = Palet(prIkincilMetin)
     End With
 
     With ws.Cells(4, K_METIN)
@@ -148,7 +148,7 @@ Private Sub KBaslikAlani(ByVal ws As Worksheet)
                     "tekrar t#iklay#inca kapan#ir. Makrolar kapal#iysa sol kenardaki + i#saretleriyle a#cabilirsiniz.")
         .WrapText = True
         .VerticalAlignment = xlTop
-        .Font.Color = RGB(51, 65, 85)
+        .Font.Color = Palet(prIkincilMetin)
     End With
     ws.Rows(4).RowHeight = 32
     ws.Rows(5).RowHeight = 30
@@ -169,14 +169,14 @@ Private Sub KButon(ByVal ws As Worksheet, ByVal metin As String, ByVal makro As 
     Set shp = ws.Shapes.AddShape(5, sol, ust, genislik, 24)
     shp.Name = "KLV_DUGME_" & makro
     shp.OnAction = makro
-    shp.Fill.ForeColor.RGB = RGB(219, 234, 254)
-    shp.Line.ForeColor.RGB = RGB(147, 197, 253)
+    shp.Fill.ForeColor.RGB = Palet(prMarkaZemin)
+    shp.Line.ForeColor.RGB = Palet(prMarka)
     With shp.TextFrame2
         .TextRange.Text = metin
         .TextRange.Font.Name = PANEL_YAZI_TIPI
         .TextRange.Font.Size = 10
         .TextRange.Font.Bold = -1
-        .TextRange.Font.Fill.ForeColor.RGB = RGB(29, 78, 216)
+        .TextRange.Font.Fill.ForeColor.RGB = Palet(prMarka)
         .TextRange.ParagraphFormat.Alignment = 2
         .VerticalAnchor = 3
     End With
@@ -202,8 +202,8 @@ Private Sub KBolum(ByVal no As Long, ByVal baslik As String)
     g_KWs.Rows(g_KSatir).RowHeight = 30
 
     With g_KWs.Range(g_KWs.Cells(g_KSatir, 2), g_KWs.Cells(g_KSatir, K_METIN))
-        .Interior.Color = RGB(30, 41, 59)
-        .Font.Color = RGB(255, 255, 255)
+        .Interior.Color = Palet(prMetin)
+        .Font.Color = Palet(prZemin)
         .Font.Bold = True
         .Font.Size = 12
         .VerticalAlignment = xlCenter
@@ -237,7 +237,7 @@ Private Sub KSatir(ByVal tur As String, ByVal metin As String)
             h.Value = HucreMetni(metin)
             h.Font.Bold = True
             h.Font.Size = 11
-            h.Font.Color = RGB(29, 78, 216)
+            h.Font.Color = Palet(prMarka)
         Case "M"
             h.Value = HucreMetni(ChrW(8226) & "  " & metin)
             h.IndentLevel = 1
@@ -247,14 +247,14 @@ Private Sub KSatir(ByVal tur As String, ByVal metin As String)
         Case "D"
             h.Value = HucreMetni(metin)
             h.IndentLevel = 1
-            h.Interior.Color = RGB(254, 243, 199)
-            h.Borders(xlEdgeLeft).Color = RGB(234, 88, 12)
+            h.Interior.Color = Palet(prDikkatZemin)
+            h.Borders(xlEdgeLeft).Color = Palet(prDikkat)
             h.Borders(xlEdgeLeft).Weight = xlThick
         Case "I"
             h.Value = HucreMetni(metin)
             h.IndentLevel = 1
-            h.Interior.Color = RGB(220, 252, 231)
-            h.Borders(xlEdgeLeft).Color = RGB(22, 163, 74)
+            h.Interior.Color = Palet(prOkZemin)
+            h.Borders(xlEdgeLeft).Color = Palet(prOk)
             h.Borders(xlEdgeLeft).Weight = xlThick
         Case "T"
             p = InStr(metin, "|")
@@ -269,13 +269,13 @@ Private Sub KSatir(ByVal tur As String, ByVal metin As String)
             h.IndentLevel = 1
             On Error Resume Next
             h.Characters(1, Len(terim)).Font.Bold = True
-            h.Characters(1, Len(terim)).Font.Color = RGB(29, 78, 216)
+            h.Characters(1, Len(terim)).Font.Color = Palet(prMarka)
             On Error GoTo 0
         Case "K"
             h.Value = HucreMetni(metin)
             h.IndentLevel = 1
             h.Font.Name = "Consolas"
-            h.Interior.Color = RGB(241, 245, 249)
+            h.Interior.Color = Palet(prYuzey)
         Case Else
             h.Value = ""
     End Select
@@ -326,14 +326,14 @@ Private Sub KBaslikSekli(ByVal ws As Worksheet, ByVal n As Long, ByVal satir As 
     Set shp = ws.Shapes.AddShape(5, sol, ws.Rows(satir).Top + 2, genislik, ws.Rows(satir).Height - 4)
     shp.Name = "KLV_B_" & n
     shp.OnAction = "KilavuzTikla"
-    shp.Fill.ForeColor.RGB = RGB(30, 41, 59)
+    shp.Fill.ForeColor.RGB = Palet(prMetin)
     shp.Line.Visible = 0
     With shp.TextFrame2
         .TextRange.Text = ChrW(9654) & "    " & GuvenliMetin(ws.Cells(satir, K_METIN).Value)
         .TextRange.Font.Name = PANEL_YAZI_TIPI
         .TextRange.Font.Size = 12
         .TextRange.Font.Bold = -1
-        .TextRange.Font.Fill.ForeColor.RGB = RGB(255, 255, 255)
+        .TextRange.Font.Fill.ForeColor.RGB = Palet(prZemin)
         .TextRange.ParagraphFormat.Alignment = 1
         .VerticalAnchor = 3
         .MarginLeft = 12
@@ -517,10 +517,10 @@ Private Sub KIsaretle(ByVal ws As Worksheet, ByVal n As Long, ByVal acik As Bool
     If shp Is Nothing Then Exit Sub
     If acik Then
         shp.TextFrame2.TextRange.Characters(1, 1).Text = ChrW(9660)
-        shp.Fill.ForeColor.RGB = RGB(29, 78, 216)
+        shp.Fill.ForeColor.RGB = Palet(prMarka)
     Else
         shp.TextFrame2.TextRange.Characters(1, 1).Text = ChrW(9654)
-        shp.Fill.ForeColor.RGB = RGB(30, 41, 59)
+        shp.Fill.ForeColor.RGB = Palet(prMetin)
     End If
     On Error GoTo 0
 
@@ -925,7 +925,7 @@ Public Sub GelistiriciGuncelle()
     ws.Range("A1").Resize(g_GSay, 1).Value = dizi
 
     On Error Resume Next
-    ws.Tab.Color = RGB(100, 116, 139)
+    ws.Tab.Color = Palet(prIkincilMetin)
     If Not eskiSayfa Is Nothing Then eskiSayfa.Activate
     On Error GoTo 0
     Exit Sub

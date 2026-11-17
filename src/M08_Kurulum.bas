@@ -113,6 +113,7 @@ Public Sub SifirdanKur()
     On Error GoTo Hata
 
     DenetimSessiz
+    KorumalariUygula
     SekmeleriDuzenle
     EkranAc
 
@@ -378,7 +379,7 @@ Private Sub PanelGorunumu(ByVal pnl As Worksheet)
     ButonlariKur pnl
     SeritDondur pnl
     On Error Resume Next
-    pnl.Tab.Color = RGB(22, 163, 74)
+    pnl.Tab.Color = Palet(prMarka)
     On Error GoTo 0
 End Sub
 
@@ -710,9 +711,9 @@ Public Sub SekmeleriDuzenle()
     On Error Resume Next
     Set eskiSayfa = ActiveSheet
 
-    sira = Array(KilavuzAdi(), SAYFA_PANEL, SAYFA_DENETIM, SAYFA_RAPOR, SAYFA_PROFIL, SAYFA_SET, SAYFA_GECMIS, SAYFA_GELISTIRICI)
-    renk = Array(RGB(29, 78, 216), RGB(22, 163, 74), RGB(14, 116, 144), RGB(234, 88, 12), RGB(124, 58, 237), _
-                 RGB(124, 58, 237), RGB(100, 116, 139), RGB(100, 116, 139))
+    sira = Array(SAYFA_PANEL, SAYFA_DENETIM, SAYFA_RAPOR, SAYFA_GECMIS, SAYFA_PROFIL, SAYFA_SET, KilavuzAdi(), SAYFA_GELISTIRICI)
+    renk = Array(Palet(prMarka), Palet(prMarka), Palet(prIkincilMetin), Palet(prIkincilMetin), Palet(prIkincilMetin), _
+                 Palet(prOneriMetin), Palet(prIkincilMetin), Palet(prIkincilMetin))
 
     konum = 0
     For i = 0 To UBound(sira)
@@ -726,11 +727,14 @@ Public Sub SekmeleriDuzenle()
     Next i
 
     For i = 1 To MAX_BLOK
-        If SayfaVarMi(SAYFA_LISTE_ONEK & i) Then ThisWorkbook.Worksheets(SAYFA_LISTE_ONEK & i).Visible = xlSheetHidden
+        If SayfaVarMi(SAYFA_LISTE_ONEK & i) Then ThisWorkbook.Worksheets(SAYFA_LISTE_ONEK & i).Visible = xlSheetVeryHidden
     Next i
-    If SayfaVarMi(SAYFA_YEDEK) Then ThisWorkbook.Worksheets(SAYFA_YEDEK).Visible = xlSheetHidden
+    If SayfaVarMi(SAYFA_YEDEK) Then ThisWorkbook.Worksheets(SAYFA_YEDEK).Visible = xlSheetVeryHidden
 
-    If Not eskiSayfa Is Nothing Then eskiSayfa.Activate
+    If SayfaVarMi(SAYFA_GELISTIRICI) Then ThisWorkbook.Worksheets(SAYFA_GELISTIRICI).Visible = xlSheetVeryHidden
+    If Not eskiSayfa Is Nothing Then
+        If eskiSayfa.Visible = xlSheetVisible Then eskiSayfa.Activate
+    End If
     On Error GoTo 0
 
 End Sub
