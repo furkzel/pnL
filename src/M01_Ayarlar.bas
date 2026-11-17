@@ -45,7 +45,9 @@ Option Private Module
 '   - IIf iki dali da hesaplar; Nothing olabilecek nesnede kullanma.
 ' ============================================================
 
-Public Const SURUM As String = "v1.0"
+Public Const SURUM As String = "v1.1-dev"
+Public Const PANEL_YAZI_TIPI As String = "Calibri"
+Public Const PANEL_YAZI_BOYUT As Double = 9.5
 
 ' Panel duzeni isareti (calisma kitabi adi). v33 panelinde yoktur.
 Public Const DUZEN_ADI As String = "AP_DUZEN"
@@ -294,6 +296,21 @@ Public Const ST_IHBAR As Long = 10
 Public Const ST_YAZIM As Long = 11
 Public Const ST_SABITLER As Long = 12
 
+Public Const SERIT_SOL As Double = 10
+Public Const SERIT_BUTON_GENISLIK As Double = 124
+Public Const SERIT_BUTON_YUKSEKLIK As Double = 26
+Public Const SERIT_BUTON_ARALIK As Double = 8
+Public Const SERIT_MENU_GENISLIK As Double = 190
+Public Const SERIT_MENU_YUKSEKLIK As Double = 22
+Public Const SERIT_MENU_ONEK As String = "AP_MENU_"
+Public Const SERIT_ADIM_SAYI As Long = 4
+
+Public Const DN_TREND_SATIR As Long = 10
+Public Const DN_TREND_SUTUN As Long = 15
+Public Const DN_TREND_GRAFIK_SUTUN As Long = 8
+Public Const DN_TREND_AY As Long = 12
+Public Const DN_TREND_GRAFIK As String = "AP_DenetimTrend"
+
 ' ------------------------------------------------------------
 '  ENUM'LAR
 ' ------------------------------------------------------------
@@ -353,6 +370,21 @@ Public Enum PaletRenk
     prTipUyusmaz
     prTipUyusmazYazi
     prCerceve
+    prZemin
+    prYuzey
+    prCizgi
+    prMetin
+    prIkincilMetin
+    prMarka
+    prMarkaZemin
+    prOk
+    prOkZemin
+    prDikkat
+    prDikkatZemin
+    prEngel
+    prEngelZemin
+    prOneriMetin
+    prOneriZemin
 End Enum
 
 ' ------------------------------------------------------------
@@ -380,39 +412,54 @@ Public Function Palet(ByVal renk As PaletRenk) As Long
 
     Select Case renk
         Case prSeritZemin:      Palet = RGB(15, 23, 42)
-        Case prSeritYazi:       Palet = RGB(241, 245, 249)
-        Case prSeritGrupYazi:   Palet = RGB(148, 163, 184)
-        Case prButonAna:        Palet = RGB(37, 99, 235)
-        Case prButonYesil:      Palet = RGB(22, 163, 74)
-        Case prButonKirmizi:    Palet = RGB(220, 38, 38)
-        Case prButonIkincil:    Palet = RGB(51, 65, 85)
-        Case prButonKenar:      Palet = RGB(100, 116, 139)
+        Case prSeritYazi:       Palet = RGB(255, 255, 255)
+        Case prSeritGrupYazi:   Palet = RGB(71, 85, 105)
+        Case prButonAna:        Palet = RGB(29, 78, 216)
+        Case prButonYesil:      Palet = RGB(21, 128, 61)
+        Case prButonKirmizi:    Palet = RGB(185, 28, 28)
+        Case prButonIkincil:    Palet = RGB(71, 85, 105)
+        Case prButonKenar:      Palet = RGB(71, 85, 105)
         Case prBlokBaslik:      Palet = RGB(71, 85, 105)
         Case prBlokBaslikAktif: Palet = RGB(29, 78, 216)
         Case prBolumYazi:       Palet = RGB(29, 78, 216)
-        Case prEtiketYazi:      Palet = RGB(51, 65, 85)
-        Case prAyarZemin:       Palet = RGB(255, 251, 235)
-        Case prAyarKenar:       Palet = RGB(203, 213, 225)
-        Case prDahilEvet:       Palet = RGB(187, 247, 208)
-        Case prDahilHayir:      Palet = RGB(254, 226, 226)
-        Case prSabitBaslik:     Palet = RGB(167, 243, 208)
-        Case prSabitDolu:       Palet = RGB(220, 252, 231)
-        Case prSabitBosSatir:   Palet = RGB(240, 253, 244)
+        Case prEtiketYazi:      Palet = RGB(71, 85, 105)
+        Case prAyarZemin:       Palet = RGB(255, 255, 255)
+        Case prAyarKenar:       Palet = RGB(226, 232, 240)
+        Case prDahilEvet:       Palet = RGB(248, 250, 252)
+        Case prDahilHayir:      Palet = RGB(248, 250, 252)
+        Case prSabitBaslik:     Palet = RGB(248, 250, 252)
+        Case prSabitDolu:       Palet = RGB(255, 255, 255)
+        Case prSabitBosSatir:   Palet = RGB(255, 255, 255)
         Case prSabitEksik:      Palet = RGB(254, 226, 226)
-        Case prDurumNotr:       Palet = RGB(241, 245, 249)
+        Case prDurumNotr:       Palet = RGB(248, 250, 252)
         Case prDurumHazir:      Palet = RGB(220, 252, 231)
         Case prDurumUyari:      Palet = RGB(254, 243, 199)
         Case prDurumHata:       Palet = RGB(254, 226, 226)
-        Case prDurumOneri:      Palet = RGB(255, 237, 213)
+        Case prDurumOneri:      Palet = RGB(237, 233, 254)
         Case prTabloBaslik:     Palet = RGB(226, 232, 240)
         Case prKaynakZemin:     Palet = RGB(248, 250, 252)
-        Case prHedefZemin:      Palet = RGB(254, 252, 232)
-        Case prFiltreZemin:     Palet = RGB(240, 253, 244)
-        Case prIslemZemin:      Palet = RGB(245, 243, 255)
-        Case prOneri:           Palet = RGB(255, 200, 120)
-        Case prTipUyusmaz:      Palet = RGB(255, 199, 206)
-        Case prTipUyusmazYazi:  Palet = RGB(156, 0, 6)
-        Case prCerceve:         Palet = RGB(148, 163, 184)
+        Case prHedefZemin:      Palet = RGB(255, 255, 255)
+        Case prFiltreZemin:     Palet = RGB(255, 255, 255)
+        Case prIslemZemin:      Palet = RGB(255, 255, 255)
+        Case prOneri:           Palet = RGB(237, 233, 254)
+        Case prTipUyusmaz:      Palet = RGB(254, 226, 226)
+        Case prTipUyusmazYazi:  Palet = RGB(185, 28, 28)
+        Case prCerceve:         Palet = RGB(71, 85, 105)
+        Case prZemin: Palet = RGB(255, 255, 255)
+        Case prYuzey: Palet = RGB(248, 250, 252)
+        Case prCizgi: Palet = RGB(226, 232, 240)
+        Case prMetin: Palet = RGB(15, 23, 42)
+        Case prIkincilMetin: Palet = RGB(71, 85, 105)
+        Case prMarka: Palet = RGB(29, 78, 216)
+        Case prMarkaZemin: Palet = RGB(219, 234, 254)
+        Case prOk: Palet = RGB(21, 128, 61)
+        Case prOkZemin: Palet = RGB(220, 252, 231)
+        Case prDikkat: Palet = RGB(146, 64, 14)
+        Case prDikkatZemin: Palet = RGB(254, 243, 199)
+        Case prEngel: Palet = RGB(185, 28, 28)
+        Case prEngelZemin: Palet = RGB(254, 226, 226)
+        Case prOneriMetin: Palet = RGB(109, 40, 217)
+        Case prOneriZemin: Palet = RGB(237, 233, 254)
         Case Else:              Palet = RGB(255, 255, 255)
     End Select
 

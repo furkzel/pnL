@@ -30,7 +30,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import xlauto  # noqa: E402
+from source_checks import SRC, check_sources, check_contrast, check_ascii  # noqa: E402
 
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -43,10 +43,12 @@ def clean_log_sheets(s, wb) -> None:
     KURULUM row written by SifirdanKur carries the builder's user names."""
     for name in ("Rapor", "Gecmis"):
         ws = wb.Worksheets(name)
+        ws.Unprotect()
         last = ws.UsedRange.Row + ws.UsedRange.Rows.Count - 1
         if last >= 2:
             ws.Range(ws.Cells(2, 1), ws.Cells(last, ws.UsedRange.Columns.Count)).EntireRow.Delete()
     s.run(wb, "DenetimSessiz")
+    s.run(wb, "KorumalariUygula")
 
 
 def main(argv=None) -> int:
@@ -54,27 +56,35 @@ def main(argv=None) -> int:
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--new", metavar="OUT.xlsm", help="create a new workbook")
     g.add_argument("--upgrade", metavar="IN.xlsm", help="upgrade a copy of an existing workbook")
-    g.add_argument("--check", action="store_true", help="only run the ASCII check")
+    g.add_argument("--check", action="store_true", help="run portable source checks")
     ap.add_argument("--out", metavar="OUT.xlsm", help="output path for --upgrade")
     ap.add_argument("--no-setup", action="store_true", help="do not run SifirdanKur after injecting")
     ap.add_argument("--visible", action="store_true", help="show the Excel window while building")
     ap.add_argument("--src", metavar="DIR", default=None,
                     help="VBA source folder (default: src/). Used by the tests to build an older layout.")
+    ap.add_argument("--historical-source", action="store_true",
+                    help="ASCII-only gate for a pinned historical --src migration fixture")
     args = ap.parse_args(argv)
+    if args.historical_source and not args.src:
+        ap.error("--historical-source requires --src")
 
-    src_dir = Path(args.src).resolve() if args.src else xlauto.SRC
+    src_dir = Path(args.src).resolve() if args.src else SRC
     if args.new:
         # Excel inherits this environment: the Denetim stamp shows a neutral name
         os.environ["USERNAME"] = "AKTUERYA"
         os.environ["USER"] = "AKTUERYA"
-    problems = xlauto.check_ascii(src_dir)
+    problems = check_ascii(src_dir) if args.historical_source else check_sources(src_dir)
+    if not problems and not args.historical_source:
+        problems.extend(check_contrast(src_dir))
     if problems:
-        print("ASCII CHECK FAILED:")
+        print("SOURCE CHECK FAILED:")
         print("\n".join(problems))
         return 1
-    print("ascii check: ok")
+    print("source checks: ok")
     if args.check:
         return 0
+
+    import xlauto  # Windows/COM is needed only for workbook operations.
 
     if args.upgrade:
         src_wb = Path(args.upgrade).resolve()

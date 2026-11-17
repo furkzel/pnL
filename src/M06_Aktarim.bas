@@ -462,13 +462,21 @@ Private Function AktarCalistir(ByVal k As Long, ByVal sadeceIsaretli As Boolean,
                                ByVal partiNo As Long, ByVal sira As Long, _
                                ByVal toplam As Long) As AktarimSonucu
 
+    Dim hata As String
     AktarCalistir = asHata
     EkranKilitle
-    On Error Resume Next
+    On Error GoTo Hata
     AktarCalistir = AktarIc(k, sadeceIsaretli, partiNo, sira, toplam)
-    On Error GoTo 0
+Cikis:
     HesapAc
     EkranAc
+    Exit Function
+Hata:
+    hata = Err.Number & " - " & Err.Description
+    On Error Resume Next
+    OlayYaz "HATA", k, partiNo, 0, "AktarCalistir: " & hata, "Aktarim tamamlanamadi"
+    On Error GoTo 0
+    GoTo Cikis
 
 End Function
 
@@ -561,6 +569,10 @@ Private Function AktarIc(ByVal k As Long, ByVal sadeceIsaretli As Boolean, _
 
     ' ============ 6. DIKKAT MADDELERI ============
     EkDikkat p
+    If p.engel <> "" Then
+        EngelBildir p
+        Exit Function
+    End If
 
     ' ============ 7. ONAY ============
     If Not OnayAl(p) Then
@@ -1424,7 +1436,7 @@ End Sub
 ' ============================================================
 Private Sub EkDikkat(ByRef p As AktarimPlani)
 
-    Dim j As Long, i As Long, korunan As Long
+    Dim j As Long, i As Long, korunan As Long, hedefHata As Long
     Dim kod As Long, tip As String
     Dim tipOnb As Sozluk, dolacak As Sozluk
     Dim kTip As String, hTip As String, tipUyusmaz As String, yesilBos As String
@@ -1432,6 +1444,11 @@ Private Sub EkDikkat(ByRef p As AktarimPlani)
     Dim korumaMetni As String, tarihMetni As String, sabitUyusmaz As String
     Dim x As Variant, kol As Variant
     Dim u() As Long
+
+    If p.tutarHedefNo > 0 Then
+        hedefHata = TutarHataSayisi(p.hedefWs, p.tutarHedefNo)
+        If hedefHata > 0 Then KEkle p, 7, True, "Ana dosya tutar sutununda " & hedefHata & " hata hucresi var; toplam dogrulanamaz."
+    End If
 
     If g_OkumaUyarisi <> "" Then
         KEkle p, 6, False, "TARIH TASMASI (#####): su sutunlarin tarihleri SAYI olarak aktarilacak: " & Trim$(g_OkumaUyarisi)
@@ -1941,7 +1958,7 @@ Private Sub Yaz(ByRef p As AktarimPlani)
     Dim cikti() As Variant
     Dim formulOnb As Sozluk
     Dim yedekRef As String, imza As String, x As Variant, f As String
-    Dim kaynakToplam As Double, yazilanToplam As Double, deger As Double
+    Dim kaynakToplam As Currency, yazilanToplam As Double, deger As Double
     Dim hedefOnceki As Double, hedefYeni As Double, eskiAralik As Double
     Dim tutarVar As Boolean, tutarTuttu As Boolean
     Dim mutabakatMetni As String, tutarHarf As String
@@ -1953,6 +1970,15 @@ Private Sub Yaz(ByRef p As AktarimPlani)
     n = p.n
     u = p.uygun
 
+    tutarVar = (p.tutarJ > 0)
+    If tutarVar Then
+        kol = p.kv(p.tutarJ)
+        For i = 1 To n
+            If SayiDegeri(kol(u(i), 1), deger) Then kaynakToplam = kaynakToplam + CCur(deger)
+        Next i
+        hedefOnceki = KolonToplami(p.hedefWs, p.tutarHedefNo)
+    End If
+
     ' --- Satir ekleme ONAYDAN SONRA (iptalde bos satir kalmasin) ---
     If p.eklenecekSatir > 0 Then
         p.hedefWs.Rows(p.boslukSon + 1).Resize(p.eklenecekSatir).Insert Shift:=xlDown
@@ -1963,13 +1989,7 @@ Private Sub Yaz(ByRef p As AktarimPlani)
     End If
 
     ' --- Mutabakat: once ---
-    tutarVar = (p.tutarJ > 0)
     If tutarVar Then
-        kol = p.kv(p.tutarJ)
-        For i = 1 To n
-            If SayiDegeri(kol(u(i), 1), deger) Then kaynakToplam = kaynakToplam + deger
-        Next i
-        hedefOnceki = KolonToplami(p.hedefWs, p.tutarHedefNo)
         eskiAralik = AralikToplami(p.hedefWs, p.tutarHedefNo, p.baslangic(p.tutarJ), p.baslangic(p.tutarJ) + n - 1)
     End If
 
@@ -2032,6 +2052,7 @@ Private Sub Yaz(ByRef p As AktarimPlani)
         LogYaz p.partiNo, aktarimNo, p.hedefWb.Name, CStr(p.hedefWs.Name), p.hedefNo(j), _
                p.kaynakAdlari(j), p.baslangic(j), p.baslangic(j) + n - 1, n, _
                GuvenliMetin(p.hedefWs.Cells(1, p.hedefNo(j)).Value), imza, yedekRef
+        If imza = "?" Then Err.Raise vbObjectError + 1101, "Yaz", "Parmak izi hesaplanamadi; aktarim durduruldu."
     Next j
 
     HesapAc
@@ -2145,21 +2166,29 @@ End Sub
 
 
 Public Function AralikToplami(ByVal ws As Worksheet, ByVal sutun As Long, ByVal ilk As Long, ByVal son As Long) As Double
-
-    Dim rng As Range
-
-    AralikToplami = 0
+    Dim v As Variant, i As Long, toplam As Currency, deger As Double
     If ilk < 1 Or son < ilk Or sutun < 1 Then Exit Function
-    Set rng = ws.Range(ws.Cells(ilk, sutun), ws.Cells(son, sutun))
-    On Error Resume Next
-    AralikToplami = Application.WorksheetFunction.Aggregate(9, 6, rng)
-    If Err.Number <> 0 Then
-        Err.Clear
-        AralikToplami = Application.WorksheetFunction.Sum(rng)
-    End If
-    Err.Clear
-    On Error GoTo 0
+    v = SutunOku(ws, sutun, ilk, son)
+    For i = 1 To UBound(v, 1)
+        If IsError(v(i, 1)) Then
+            Err.Raise vbObjectError + 1102, "AralikToplami", "Hedef tutar araliginda Excel hata hucresi var."
+        End If
+        ' Preserve Excel SUM semantics: text is not a written numeric amount.
+        If VarType(v(i, 1)) <> vbString Then
+            If SayiDegeri(v(i, 1), deger) Then toplam = toplam + CCur(deger)
+        End If
+    Next i
+    AralikToplami = CDbl(toplam)
+End Function
 
+Public Function TutarHataSayisi(ByVal ws As Worksheet, ByVal sutun As Long) As Long
+    Dim v As Variant, i As Long, son As Long
+    son = ws.Cells(ws.Rows.Count, sutun).End(xlUp).Row
+    If son < 2 Then Exit Function
+    v = SutunOku(ws, sutun, 2, son)
+    For i = 1 To UBound(v, 1)
+        If IsError(v(i, 1)) Then TutarHataSayisi = TutarHataSayisi + 1
+    Next i
 End Function
 
 

@@ -140,8 +140,10 @@ Public Sub GeriAl()
                     Else
                         ' PARMAK IZI: aktarimdan sonra satir eklendi/silindi mi?
                         kayitliImza = Trim$(GuvenliMetin(v(i, G_IMZA)))
-                        If kayitliImza <> IMZA_YOK Then
-                            If AralikImzasi(hedefWs, gNo, ilkS, sonS, (Left$(kayitliImza, 2) = "F;")) <> kayitliImza Then
+                        If kayitliImza = "?" Then
+                            sorun = sorun & "- Gecersiz parmak izi: " & sutunHarf & vbNewLine
+                        ElseIf kayitliImza <> IMZA_YOK Then
+                            If AralikImzasi(hedefWs, gNo, ilkS, sonS, (Left$(kayitliImza, 2) = "F;"), (Mid$(kayitliImza, 3, 6) <> "CRC32=")) <> kayitliImza Then
                                 imzaFarki = imzaFarki & "   " & sutunHarf & " (" & GuvenliMetin(v(i, G_KAYNAK_SUTUN)) & _
                                             ") satir " & ilkS & " - " & sonS & vbNewLine
                             End If
@@ -321,7 +323,7 @@ End Function
 '  yazilir: bolgesel ayardan (virgul/nokta) etkilenmez.
 ' ============================================================
 Public Function AralikImzasi(ByVal ws As Worksheet, ByVal sutun As Long, ByVal ilk As Long, _
-                             ByVal son As Long, ByVal formulMu As Boolean) As String
+                             ByVal son As Long, ByVal formulMu As Boolean, Optional ByVal eski As Boolean = False) As String
 
     Dim rng As Range
     Dim v As Variant, x As Variant
@@ -340,6 +342,11 @@ Public Function AralikImzasi(ByVal ws As Worksheet, ByVal sutun As Long, ByVal i
         x = v
         ReDim v(1 To 1, 1 To 1)
         v(1, 1) = x
+    End If
+
+    If Not eski Then
+        AralikImzasi = IIf(formulMu, "F;", "V;") & "CRC32=" & DiziKarmasi(v)
+        Exit Function
     End If
 
     For i = 1 To UBound(v, 1)
@@ -386,7 +393,7 @@ End Function
 Private Function YedekSayfasi() As Worksheet
     Dim ws As Worksheet
     Set ws = SayfaOlustur(SAYFA_YEDEK)
-    If ws.Visible <> xlSheetHidden Then ws.Visible = xlSheetHidden
+    If ws.Visible <> xlSheetVeryHidden Then ws.Visible = xlSheetVeryHidden
     Set YedekSayfasi = ws
 End Function
 
@@ -957,13 +964,13 @@ End Sub
 
 Public Function OlayRengi(ByVal olay As String) As Long
     Select Case olay
-        Case "AKTARIM":                         OlayRengi = RGB(220, 252, 231)
-        Case "DIKKAT", "UYARI", "SATIR EKLEME": OlayRengi = RGB(254, 243, 199)
-        Case "ENGEL", "HATA":                   OlayRengi = RGB(254, 202, 202)
-        Case "GERI ALMA":                       OlayRengi = RGB(219, 234, 254)
-        Case "KONTROL", "MUTABAKAT":            OlayRengi = RGB(237, 233, 254)
-        Case "IPTAL":                           OlayRengi = RGB(241, 245, 249)
-        Case Else:                              OlayRengi = RGB(255, 255, 255)
+        Case "AKTARIM":                         OlayRengi = Palet(prOkZemin)
+        Case "DIKKAT", "UYARI", "SATIR EKLEME": OlayRengi = Palet(prDikkatZemin)
+        Case "ENGEL", "HATA":                   OlayRengi = Palet(prEngelZemin)
+        Case "GERI ALMA":                       OlayRengi = Palet(prMarkaZemin)
+        Case "KONTROL", "MUTABAKAT":            OlayRengi = Palet(prOneriZemin)
+        Case "IPTAL":                           OlayRengi = Palet(prYuzey)
+        Case Else:                              OlayRengi = Palet(prZemin)
     End Select
 End Function
 

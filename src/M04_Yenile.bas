@@ -208,7 +208,7 @@ Public Function BlokYenile(ByVal pnl As Worksheet, ByVal k As Long) As String
             With pnl.Range(pnl.Cells(ILK_SATIR, c + OFS_KAYNAK), pnl.Cells(ILK_SATIR - 1 + sonSut, c + OFS_KAYNAK))
                 .Value = yaz
                 .Interior.Color = Palet(prKaynakZemin)
-                .Font.Color = RGB(30, 41, 59)
+                .Font.Color = Palet(prMetin)
             End With
             ayniKaynak = AyniAdlar(yaz)
             KaynakTara pnl, k, lst, kaynakWs, sonSut
@@ -677,6 +677,12 @@ Public Function DurumYaz(ByVal pnl As Worksheet, ByVal k As Long) As String
         End If
     End If
 
+    If Not DahilMi(pnl, k) Then
+        metin = "PASIF: aktarima dahil degil"
+        renk = Palet(prDurumNotr)
+    ElseIf renk = Palet(prDurumHata) And Left$(metin, 5) = "HAZIR" Then
+        metin = "KONTROL GEREKIYOR" & Mid$(metin, 6)
+    End If
     If notlar <> "" Then metin = metin & "  |  " & notlar
 
     pnl.Cells(SATIR_DURUM, c).Value = HucreMetni("DURUM: " & metin)
@@ -1309,7 +1315,13 @@ Private Sub HedefHucreBoya(ByVal h As Range, renkler() As Long, renkVar() As Boo
     h.Interior.Color = Palet(prHedefZemin)
     hNo = SutunNo(h.Value)
     If hNo >= 1 And hNo <= sonSut Then
-        If renkVar(hNo) Then h.Interior.Color = renkler(hNo)
+        h.Borders(xlEdgeLeft).LineStyle = xlNone
+        If renkVar(hNo) Then
+            If YesilMi(renkler(hNo)) Then
+                h.Borders(xlEdgeLeft).LineStyle = xlContinuous
+                h.Borders(xlEdgeLeft).Color = Palet(prMarka)
+            End If
+        End If
     End If
 
 End Sub
@@ -1424,14 +1436,17 @@ Public Sub HaritayiYaz(ByVal pnl As Worksheet, ByVal k As Long, ByVal hedefWs As
             End If
 
             If renkVar(i) Then
-                hucre.Interior.Color = renkler(i)
+                hucre.Interior.Color = Palet(prZemin)
                 If YesilMi(renkler(i)) Then
+                    hucre.Value = HucreMetni(GuvenliMetin(hucre.Value) & "  " & ChrW(9679))
+                    hucre.Borders(xlEdgeLeft).LineStyle = xlContinuous
+                    hucre.Borders(xlEdgeLeft).Color = Palet(prMarka)
                     yesilToplam = yesilToplam + 1
                     If Not kullanilan.Exists(i) Then
                         yesilBos = yesilBos + 1
                         hucre.Value = HucreMetni(SutunEtiketi(i, baslik) & "   << YESIL, BOSTA")
                         hucre.Font.Bold = True
-                        hucre.Font.Color = RGB(255, 255, 255)
+                        hucre.Font.Color = Palet(prZemin)
                         hucre.Interior.Color = Palet(prButonKirmizi)
                     End If
                 End If
@@ -1495,7 +1510,7 @@ Public Sub TipSutunuYaz(ByVal pnl As Worksheet, ByVal k As Long, ByVal hedefWs A
             metin = GuvenliMetin(lst.Cells(r, LST_KAYNAK_TIP_METIN).Value)
             h.Value = HucreMetni(metin)
             h.Font.Bold = False
-            h.Font.Color = RGB(30, 41, 59)
+            h.Font.Color = Palet(prMetin)
             h.HorizontalAlignment = xlCenter
             h.Interior.Color = TipRengi(kTip, metin)
 
@@ -1521,15 +1536,15 @@ End Sub
 Private Function TipRengi(ByVal tip As String, ByVal metin As String) As Long
 
     Select Case tip
-        Case "TARIH":   TipRengi = RGB(219, 234, 254)
-        Case "SAYI":    TipRengi = RGB(220, 252, 231)
-        Case "METIN":   TipRengi = RGB(241, 245, 249)
-        Case "KARISIK": TipRengi = RGB(254, 240, 138)
-        Case Else:      TipRengi = RGB(255, 255, 255)
+        Case "TARIH":   TipRengi = Palet(prMarkaZemin)
+        Case "SAYI":    TipRengi = Palet(prYuzey)
+        Case "METIN":   TipRengi = Palet(prYuzey)
+        Case "KARISIK": TipRengi = Palet(prDikkatZemin)
+        Case Else:      TipRengi = Palet(prZemin)
     End Select
 
     ' Baskin tip olsa da azinlik varsa (orn. %85 tarih) uyari tonu
-    If InStr(metin, "%") > 0 And tip <> "KARISIK" Then TipRengi = RGB(254, 243, 199)
+    If InStr(metin, "%") > 0 And tip <> "KARISIK" Then TipRengi = Palet(prDikkatZemin)
 
 End Function
 

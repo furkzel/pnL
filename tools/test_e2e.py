@@ -375,7 +375,7 @@ def run_main(panel_path: Path, work: Path):
         check("scorecard K7 after transfer", "✓" in str(pnl.Cells(15, KARNE).Value) and "FARK 0,00" in str(pnl.Cells(17, KARNE).Value),
               str(pnl.Cells(15, KARNE).Value) + " | " + str(pnl.Cells(17, KARNE).Value))
         den = wbP.Worksheets("Denetim")
-        check("Denetim sheet refreshed", str(den.Cells(6, 2).Value).strip("'") == "1" and str(den.Cells(6, 4).Value).strip("'") == "1",
+        check("Denetim sheet refreshed", den.Cells(6, 2).Value == 1 and den.Cells(6, 4).Value == 1,
               f"{den.Cells(6, 2).Value!r} {den.Cells(6, 4).Value!r}")
         check("Denetim: K8 statistics", (den.Cells(18, 4).Value or 0) >= 1, repr(den.Cells(18, 4).Value))
         check("Denetim: last transfer row", den.Cells(22, 10).Value == "TUTUYOR" and den.Cells(22, 11).Value == "ETKIN",
@@ -622,7 +622,7 @@ def run_migration_v34(work: Path):
         return
     old = work / "v34_panel.xlsm"
     build = __import__("build")
-    check("v34 workbook built from git HEAD", build.main(["--new", str(old), "--src", str(old_src / "src"), "--no-setup"]) == 0)
+    check("v34 workbook built from git HEAD", build.main(["--new", str(old), "--src", str(old_src / "src"), "--historical-source", "--no-setup"]) == 0)
     data = work / "v34_data"
     data.mkdir()
     with xlauto.ExcelSession() as s:
