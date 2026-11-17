@@ -15,6 +15,7 @@ Output in dist/release/:
   SHA256SUMS.txt                   checksums to verify the downloads
 
 Split install = xlsx + zip: open the xlsx, import the modules, save as .xlsm.
+The download page's checksum table and screenshots (docs/*_<v>.png) are updated.
 """
 from __future__ import annotations
 
@@ -225,6 +226,10 @@ def main(argv=None) -> int:
                           lambda m, h=sha256(f): m.group(1) + h, html)
         page.write_text(html, encoding="utf-8")
         print("updated checksums in", page)
+
+    # Screenshots of the released workbook for the page (needs pdftoppm)
+    import screenshot
+    screenshot.main(["--panel", str(xlsm)])
     return 0
 
 

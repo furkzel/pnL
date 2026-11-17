@@ -1,15 +1,5 @@
 # Aktarım Paneli
 
-> **v1.1 "Kurumsal Sürüm" — pre-release (macros only); stable release is still v1.0.**
-> All v1.1 work is in `src/` and passes the portable gates (ASCII, palette, type
-> scale, contrast, MsgBox budget, VBA lint, LibreOffice compile smoke test).
-> Excel compilation, the E2E/enterprise suites, migration runs, `perf.py` and the
-> screenshots need Windows + Excel and **have not been run yet**. The pre-release macro
-> package is on the [download page](https://furkzel.github.io/pnL/#v11)
-> (`docs/v1.1/`, reproducible: `python tools/release.py --version v1.1 --macros-only --out docs/v1.1`);
-> the workbook downloads and screenshots below are still v1.0. Status per requirement:
-> [plan/V1.1_SONUC.md](plan/V1.1_SONUC.md).
-
 **Column-mapped, audited data transfer for actuarial closing in Excel.**
 
 Every month, claim files (*Ödenen*, *Muallak*, …) have to be appended to cumulative
@@ -22,7 +12,7 @@ An **Analiz** sheet summarises the monthly or master data by any dimension.
 It is pure Excel VBA: no add-ins, no ActiveX and no `Scripting` runtime. It runs on
 locked-down Citrix desktops and on Mac Excel.
 
-![Panel (v1.0 screenshot)](docs/panel_v1.0.png)
+![Panel](docs/panel_v1.1.png)
 
 **At a glance (v1.1)**
 
@@ -226,7 +216,7 @@ judgment, and running it does not by itself establish compliance.
 - **Ayarlar** (new): all thresholds with code, value, default and explanation; the
   mandatory-columns table overrides header colours.
 
-![Denetim](docs/denetim_v1.0.png)
+![Denetim](docs/denetim_v1.1.png)
 
 ---
 
@@ -401,7 +391,7 @@ in the hot loops (about 5 million calls fewer per run).
 
 | Version | Highlights |
 |---|---|
-| v1.1 (source) | Enterprise release, source complete, Excel validation pending: K9–K14, multi-column / row-count / layered reconciliation, typed CRC32, lineage and TOCTOU, lock, backup retention, Ayarlar thresholds, quality score, Analiz A1–A9, semantic palette and type scale, state-aware ribbon, notification strip (30 dialogs), Denetim redesign, protection, print setup, v1.0 → v1.1 migration, portable lint and LibreOffice compile gates. See plan/V1.1_SONUC.md |
+| v1.1 | Enterprise release: K9–K14, multi-column / row-count / layered reconciliation, typed CRC32, lineage and TOCTOU, lock, backup retention, Ayarlar thresholds, quality score, Analiz A1–A9, semantic palette and type scale, state-aware ribbon, notification strip (30 dialogs), Denetim redesign, protection, print setup, v1.0 → v1.1 migration, portable lint and LibreOffice compile gates. |
 | v33 | Monolithic Module1/2/3 with an analytics add-on |
 | v34 | Modular `src/`, build/test tooling, format guard, fingerprinted undo, patch mode, filters, ~9× faster Yenile |
 | v1.0 | K1–K8 control points with live scorecard and tagged audit rows; Denetim sheet; HAZIRLIK; batch reconciliation; amount, green-cell and fixed-value checks; editable columns grouped with the map moved right; card layout; double-click shortcuts; auto-detected control columns; v33/v34/v35 → v1.0 migration; supersedes the release first published as v35 |

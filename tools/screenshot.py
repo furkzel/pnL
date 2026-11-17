@@ -45,10 +45,10 @@ def render(ws, address: str, out_png: Path, work: Path, dpi: int = 150):
     print("saved", out_png)
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--panel", default=str(xlauto.ROOT / "dist" / "AktarimPaneli_v1.1.xlsm"))
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     docs = xlauto.ROOT / "docs"
     docs.mkdir(exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="apb_shot_"))
