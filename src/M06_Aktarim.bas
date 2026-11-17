@@ -1417,11 +1417,21 @@ Private Sub EkDikkat(ByRef p As AktarimPlani)
     End If
 
     ' --- v1.1 kontrol noktalari ---
-    K9Kontrol p
+    ' Secili sutun yamasi yalnizca SEC sutunlari mevcut satirlarin uzerine
+    ' yazar: anahtar tekilligi, makulluk, sema ve kirilim mutabakati o
+    ' kapsamda anlam tasimaz (yok); tarih ve kaynak izi yine denetlenir.
+    If p.sadeceIsaretli Then
+        KYok p, 9
+        KYok p, 11
+        KYok p, 12
+        KYok p, 13
+    Else
+        K9Kontrol p
+        K11Kontrol p
+        K13Hazirla p
+        K12Kontrol p
+    End If
     K10Kontrol p
-    K11Kontrol p
-    K13Hazirla p
-    K12Kontrol p
     K14Kontrol p
     TamlikHesapla p, zorunluBos, zorunluHucre
     KaliteHesapla p
