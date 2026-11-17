@@ -38,6 +38,15 @@ Imp Eqv AddressOf WithEvents Implements Event RaiseEvent Open Close Output Input
 Read Write Lock Shared Line Print Width Seek Name Kill MkDir RmDir ChDir ChDrive Decimal Text
 """.split()}
 
+# Words Excel's compiler rejects as variable / parameter names (case-insensitive).
+RESERVED = {w.lower() for w in """
+And As Boolean ByRef Byte ByVal Call Case Const Currency Date Declare Dim Do Double Each Else ElseIf End Enum
+Erase Error Event Exit False For Friend Function Get Global GoSub GoTo If Implements In Integer Is Let Like Long
+LongLong Loop LSet Me Mod New Next Not Nothing Null On Option Optional Or ParamArray Preserve Private Public
+RaiseEvent ReDim Resume Return RSet Select Set Single Static Stop String Sub Then To True Type TypeOf Until
+Variant Wend While With WithEvents Xor
+""".split()}
+
 PROC_RE = re.compile(r"^\s*(?:(Public|Private|Friend|Global)\s+)?(?:Static\s+)?(Sub|Function|Property\s+(?:Get|Let|Set))\s+(\w+)\s*(\((.*)\))?", re.I)
 END_PROC_RE = re.compile(r"^\s*End\s+(Sub|Function|Property)\b", re.I)
 IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*[$%&#!@]?")
@@ -302,6 +311,8 @@ def lint(src: Path = SRC, builtins: set[str] | None = None, collect_unknown: boo
         for p in m.procs:
             local: dict[str, int] = {}
             for prm in p.params:
+                if prm.name.lower() in RESERVED:
+                    problems.append(f"{m.name}:{p.line}: {p.name}: reserved word '{prm.name}' used as a parameter name")
                 if prm.name.lower() in local:
                     problems.append(f"{m.name}:{p.line}: {p.name}: duplicate parameter '{prm.name}'")
                 local[prm.name.lower()] = p.line
@@ -315,6 +326,8 @@ def lint(src: Path = SRC, builtins: set[str] | None = None, collect_unknown: boo
                     if re.match(r"\s*ReDim\b", stmt, re.I):
                         names = []
                     for nm in names:
+                        if nm.lower() in RESERVED:
+                            problems.append(f"{m.name}:{n}: {p.name}: reserved word '{nm}' used as a variable name")
                         if nm.lower() in local:
                             problems.append(f"{m.name}:{n}: {p.name}: duplicate declaration '{nm}'")
                         local[nm.lower()] = n

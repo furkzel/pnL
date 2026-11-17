@@ -114,6 +114,9 @@ Public Sub SifirdanKur()
     On Error GoTo Hata
 
     DenetimSessiz
+    On Error Resume Next
+    AnalizSayfasiHazirla
+    On Error GoTo Hata
     KorumalariUygula
     SekmeleriDuzenle
     EkranAc

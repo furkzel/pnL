@@ -48,6 +48,9 @@ class Lint(unittest.TestCase):
     def test_duplicate_dim(self):
         self.assertTrue(any("duplicate declaration" in x for x in self.run_lint("    Dim n As String")))
 
+    def test_reserved_variable(self):
+        self.assertTrue(any("reserved word" in x for x in self.run_lint("    Dim sEt As Double")))
+
     def test_ambiguous(self):
         self.assertTrue(any("ambiguous" in x for x in self.run_lint("", "Public Sub Test()\nEnd Sub\n")))
 
