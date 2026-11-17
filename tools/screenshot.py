@@ -7,7 +7,7 @@ exported to PDF (Range.ExportAsFixedFormat) and rasterised with pdftoppm
 (Poppler / TeX Live / MiKTeX). Nothing is captured from the screen and the
 clipboard is not touched.
 
-  python tools/screenshot.py [--panel dist/AktarimPaneli_v1.0.xlsm]
+  python tools/screenshot.py [--panel dist/AktarimPaneli_v1.1.xlsm]
 """
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ def render(ws, address: str, out_png: Path, work: Path, dpi: int = 150):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--panel", default=str(xlauto.ROOT / "dist" / "AktarimPaneli_v1.0.xlsm"))
+    ap.add_argument("--panel", default=str(xlauto.ROOT / "dist" / "AktarimPaneli_v1.1.xlsm"))
     args = ap.parse_args()
     docs = xlauto.ROOT / "docs"
     docs.mkdir(exist_ok=True)
@@ -91,15 +91,15 @@ def main():
         wbP.Activate()
         pnl.Activate()
         s.run(wbP, "PaneleGit", 1)
-        render(pnl, "$A$1:$R$50", docs / "panel_v1.0.png", work)
-        render(wbP.Worksheets("Denetim"), "$A$1:$M$40", docs / "denetim_v1.0.png", work)
+        render(pnl, "$A$1:$R$50", docs / "panel_v1.1.png", work)
+        render(wbP.Worksheets("Denetim"), "$A$1:$M$40", docs / "denetim_v1.1.png", work)
 
         klv = wbP.Worksheets(1)
         # Sections start collapsed: crop to the last visible row (table of contents).
         last = klv.UsedRange.Row + klv.UsedRange.Rows.Count - 1
         while last > 1 and klv.Rows(last).Hidden:
             last -= 1
-        render(klv, f"$A$1:$D${last + 1}", docs / "kilavuz_v1.0.png", work)
+        render(klv, f"$A$1:$D${last + 1}", docs / "kilavuz_v1.1.png", work)
         wbP.Close(False)
 
 
