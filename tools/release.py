@@ -2,6 +2,9 @@
 release.py - build the three download packages for a release.
 
   python tools/release.py [--version v1.1]
+  python tools/release.py --version v1.1 --macros-only [--out docs/v1.1]
+      Portable (no Excel): only the macro zip + SHA256SUMS.txt, with
+      reproducible timestamps, for a pre-release that has no built workbook.
 
 Output in dist/release/:
   AktarimPaneli_<v>.xlsm          workbook + macros (ready to use)
@@ -23,8 +26,9 @@ import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import build  # noqa: E402
-import xlauto  # noqa: E402
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+ZIP_TIME = (2026, 11, 17, 0, 0, 0)   # fixed member timestamps: identical bytes on every build
 
 KURULUM = """AKTARIM PANELI {v} - MAKROLARI ELLE KURMA
 =========================================
@@ -62,6 +66,59 @@ GUVENLIK
 """
 
 
+KURULUM_ONSURUM = """AKTARIM PANELI {v} ON SURUM - MAKROLARI MEVCUT KITABA KURMA
+===========================================================
+
+DURUM: {v} kaynak kodu tamamdir ama HENUZ EXCEL'DE DERLENMEDI ve uctan
+uca testleri calistirilmadi. Bu paket gozden gecirme ve deneme icindir;
+aylik kapanista kararli surum v1.0'dir. Denemeyi bir KOPYA uzerinde yapin.
+
+1) v1.0 calisma kitabinizin (AktarimPaneli_v1.0.xlsm) bir KOPYASINI alin
+   ve kopyayi acin. (Yeni baslayanlar: sayfadaki v1.0 .xlsm'i indirin.)
+
+2) Alt+F11 ile VBA editorunu acin. Soldaki agacta Sozluk ve M01_... ile
+   baslayan TUM modulleri sag tik > Remove (Export: Hayir) ile kaldirin.
+
+3) File > Import File... ile bu klasordeki dosyalari ice aktarin:
+       Sozluk.cls
+       M01_Ayarlar.bas ... M16_Bellek.bas  (15 dosya)
+
+4) "Panel" sayfasinin kod sayfasini (parantez icinde "Panel" yazan satir)
+   acin, icini silip Panel_sayfa_kodu.txt dosyasinin TAMAMINI yapistirin.
+
+5) Ayni seyi "ThisWorkbook" ("BuCalismaKitabi") icin ThisWorkbook_kodu.txt
+   ile yapin.
+
+6) Debug > Compile VBAProject. HATA CIKARSA durun ve hatanin goruldugu
+   satiri bildirin (bu surum Excel'de henuz derlenmedi).
+
+7) Alt+F8 > SifirdanKur. Panel v1.1 duzenine tasinir (ayarlar, eslesmeler,
+   sabit degerler, Rapor, Gecmis, Profiller, Setler korunur); Ayarlar ve
+   Analiz sayfalari kurulur. Kaydedin.
+
+GUVENLIK
+- Dosyalarin butunlugunu SHA256SUMS.txt ile dogrulayin
+  (PowerShell: Get-FileHash dosya -Algorithm SHA256).
+- Kodun tamami ACIK metindir; ice aktarmadan once okuyabilirsiniz.
+- Makrolar disari baglanmaz. Sildigi tek dosya, aktarim sirasinda ana
+  dosyanin yanina kendisinin yazdigi .aplock kilit dosyasidir.
+"""
+
+
+def macros_zip(zp: Path, v: str, kurulum: str) -> None:
+    def add(z, name, data):
+        info = zipfile.ZipInfo(name, ZIP_TIME)
+        info.compress_type = zipfile.ZIP_DEFLATED
+        info.external_attr = 0o644 << 16
+        z.writestr(info, data)
+    with zipfile.ZipFile(zp, "w") as z:
+        for f in [SRC / "Sozluk.cls"] + sorted(SRC.glob("M*.bas")):
+            add(z, f"makrolar/{f.name}", crlf(f.read_text(encoding="ascii")))
+        add(z, "makrolar/Panel_sayfa_kodu.txt", crlf((SRC / "Panel.cls").read_text(encoding="ascii")))
+        add(z, "makrolar/ThisWorkbook_kodu.txt", crlf((SRC / "ThisWorkbook.cls").read_text(encoding="ascii")))
+        add(z, "makrolar/KURULUM.txt", crlf(kurulum.format(v=v)))
+
+
 def sha256(p: Path) -> str:
     h = hashlib.sha256()
     with open(p, "rb") as f:
@@ -92,8 +149,27 @@ def crlf(text: str) -> bytes:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--version", default="v1.1")
+    ap.add_argument("--macros-only", action="store_true",
+                    help="portable: only the macro zip and its checksum (pre-release, no Excel)")
+    ap.add_argument("--out", default=None, help="output folder (default dist/release)")
     a = ap.parse_args(argv)
     v = a.version
+    if a.macros_only:
+        from source_checks import check_sources, check_contrast
+        from vba_lint import lint
+        problems = check_sources() + check_contrast() + lint()
+        if problems:
+            print("SOURCE CHECK FAILED:\n" + "\n".join(problems))
+            return 1
+        out = Path(a.out).resolve() if a.out else ROOT / "dist" / "release"
+        out.mkdir(parents=True, exist_ok=True)
+        zp = out / f"AktarimPaneli_{v}_makrolar.zip"
+        macros_zip(zp, v, KURULUM_ONSURUM)
+        (out / "SHA256SUMS.txt").write_text(f"{sha256(zp)}  {zp.name}\n", encoding="ascii")
+        print("saved:", zp, sha256(zp))
+        return 0
+    import build  # noqa: F401  Windows/COM only from here on
+    import xlauto
     out = xlauto.ROOT / "dist" / "release"
     out.mkdir(parents=True, exist_ok=True)
     xlsm = out / f"AktarimPaneli_{v}.xlsm"

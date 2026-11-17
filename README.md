@@ -1,11 +1,13 @@
 # Aktarım Paneli
 
-> **v1.1 "Kurumsal Sürüm" — source complete, not yet released.**
+> **v1.1 "Kurumsal Sürüm" — pre-release (macros only); stable release is still v1.0.**
 > All v1.1 work is in `src/` and passes the portable gates (ASCII, palette, type
 > scale, contrast, MsgBox budget, VBA lint, LibreOffice compile smoke test).
 > Excel compilation, the E2E/enterprise suites, migration runs, `perf.py` and the
-> screenshots need Windows + Excel and **have not been run yet**; the downloads and
-> screenshots below are still v1.0. Status per requirement:
+> screenshots need Windows + Excel and **have not been run yet**. The pre-release macro
+> package is on the [download page](https://furkzel.github.io/pnL/#v11)
+> (`docs/v1.1/`, reproducible: `python tools/release.py --version v1.1 --macros-only --out docs/v1.1`);
+> the workbook downloads and screenshots below are still v1.0. Status per requirement:
 > [plan/V1.1_SONUC.md](plan/V1.1_SONUC.md).
 
 **Column-mapped, audited data transfer for actuarial closing in Excel.**

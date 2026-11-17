@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Aktarım Paneli v1.0 — İndir</title>
+<title>Aktarım Paneli — İndir</title>
 <meta name="description" content="Aylık hasar dosyalarını birikimli ana dosyalara eşleme ile aktaran Excel aracı. Makrolu, makrosuz ve yalnızca makro paketleri.">
 <style>
   :root {
@@ -54,6 +54,7 @@
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   td, th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
   td.hash { font-family: Consolas, ui-monospace, monospace; font-size: 12px; word-break: break-all; }
+  td { overflow-wrap: anywhere; }
   .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
   footer { color: var(--muted); font-size: 14px; padding: 24px 0 40px; border-top: 1px solid var(--line); }
   .copy { font-size: 12px; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line);
@@ -63,7 +64,7 @@
 <body>
 <header>
   <div class="wrap">
-    <span class="tag">Sürüm v1.0 · ilk kararlı yayın · Excel VBA · açık kaynak</span>
+    <span class="tag">Kararlı: v1.0 · Ön sürüm: v1.1 · Excel VBA · açık kaynak</span>
     <h1>Aktarım Paneli</h1>
     <p>Aylık hasar dosyalarını (ödenen, muallak) birikimli ana dosyalara <strong>sütun eşlemesiyle</strong>
        aktarır. Her aktarım öncesinde denetlenir, sonrasında tutar mutabakatı yapılır, kayda geçer ve geri alınabilir.</p>
@@ -71,16 +72,44 @@
 </header>
 
 <main class="wrap">
-  <aside class="wrap" role="note" style="padding-top:16px">
-    <p class="note"><strong>v1.1 “Kurumsal Sürüm”:</strong> kaynak kod tamamlandı, Windows + Excel doğrulaması
-    (derleme, uçtan uca testler, performans, ekran görüntüleri) henüz yapılmadı. Bu yüzden aşağıdaki indirmeler
-    ve ekran görüntüleri yayımlanmış <strong>v1.0</strong> sürümüne aittir; v1.1 yayın paketi doğrulamadan sonra eklenecek.
-    <a href="https://github.com/furkzel/pnL/blob/main/plan/V1.1_SONUC.md">Kapsam ve doğrulama raporu</a></p>
-  </aside>
+<section id="v11">
+  <h2>v1.1 “Kurumsal Sürüm” · ön sürüm</h2>
+  <p class="note"><strong>Doğrulama bekliyor.</strong> v1.1'in kaynak kodu tamamlandı ve Excel gerektirmeyen bütün kapılardan
+     geçti; ancak <strong>henüz Excel'de derlenmedi</strong>, uçtan uca testleri ve performans ölçümü yapılmadı.
+     Aylık kapanışta <a href="#indir">kararlı v1.0</a>'ı kullanın; v1.1'i bir kopya üzerinde deneyin.</p>
+  <div class="two">
+    <div class="card rec">
+      <span class="badge">Ön sürüm · yalnızca makrolar</span>
+      <h3>AktarimPaneli_v1.1_makrolar.zip</h3>
+      <div class="ext">~0.18 MB · 15 modül, 1 sınıf, 2 sayfa kodu, KURULUM.txt</div>
+      <p>Mevcut bir v1.0 kitabının kopyasına içe aktarılır, ardından <code>SifirdanKur</code> paneli v1.1 düzenine taşır
+         (ayarlar, eşleşmeler, Rapor ve Geçmiş korunur). Hazır <code>.xlsm</code> / <code>.xlsx</code> paketleri Excel
+         doğrulamasından sonra yayınlanacak.</p>
+      <a class="btn" href="v1.1/AktarimPaneli_v1.1_makrolar.zip" download>⬇ v1.1 makroları indir (.zip)</a>
+      <p style="margin:12px 0 0;flex:0"><span class="ext">SHA-256</span><br>
+         <span class="hash ext" style="word-break:break-all">cce66e038fee81d7b061f8bb6b2cdbd5d2d368311f9c406a3f822f91cf441439</span></p>
+    </div>
+    <div class="card">
+      <h3>Ne doğrulandı, ne doğrulanmadı</h3>
+      <table>
+        <tr><td>Kaynak kapıları (ASCII, renk, yazı ölçeği, kontrast, ≤ 30 diyalog)</td><td style="white-space:nowrap">✓ geçti</td></tr>
+        <tr><td>VBA statik çözümleme (tanımsız ad, argüman sayısı, ayrılmış ad)</td><td style="white-space:nowrap">✓ geçti</td></tr>
+        <tr><td>LibreOffice Basic sözdizimi derlemesi, 18 modül</td><td style="white-space:nowrap">✓ geçti</td></tr>
+        <tr><td>Parmak izi algoritması ↔ zlib CRC-32 modeli</td><td style="white-space:nowrap">✓ geçti</td></tr>
+        <tr><td>Excel <em>Debug › Compile</em></td><td style="white-space:nowrap">bekliyor</td></tr>
+        <tr><td>Uçtan uca testler (206 kontrol) ve v1.0 → v1.1 geçişi</td><td style="white-space:nowrap">bekliyor</td></tr>
+        <tr><td>Performans (Yenile ≤ 6 sn, Analiz 870 bin satır)</td><td style="white-space:nowrap">bekliyor</td></tr>
+      </table>
+      <p style="margin-top:12px">Derleme hatası ya da beklenmeyen davranış görürseniz
+         <a href="https://github.com/furkzel/pnL/issues">GitHub Issues</a>'a satırı ve mesajı yazın.
+         Ayrıntılı durum: <a href="https://github.com/furkzel/pnL/blob/main/plan/V1.1_SONUC.md">doğrulama raporu</a>.</p>
+    </div>
+  </div>
+</section>
 
 
-<section>
-  <h2>İndir</h2>
+<section id="indir">
+  <h2>İndir · kararlı sürüm v1.0</h2>
   <p class="note"><strong>Güvenlik uyarısı mı alıyorsunuz?</strong> Kurum ağınız veya e-postanız makrolu dosyaları
      (<code>.xlsm</code>) engelliyorsa <strong>2</strong> ve <strong>3</strong> numaralı paketleri ayrı ayrı indirip
      kendi bilgisayarınızda birleştirin. Aşağıdaki <a href="#ayri">adımlar</a> 5 dakika sürer.</p>
@@ -241,7 +270,7 @@
 </main>
 
 <footer>
-  <div class="wrap">Aktarım Paneli v1.0 · Kullanım kılavuzu çalışma kitabının içindeki <strong>Kılavuz</strong> sayfasındadır ·
+  <div class="wrap">Aktarım Paneli · kararlı v1.0, ön sürüm v1.1 · Kullanım kılavuzu çalışma kitabının içindeki <strong>Kılavuz</strong> sayfasındadır ·
     Geliştirici notları: <a href="https://github.com/furkzel/pnL#readme">README</a></div>
 </footer>
 
