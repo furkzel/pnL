@@ -318,7 +318,7 @@ Public Sub HazirlikGuncelle(ByVal pnl As Worksheet)
 
     On Error Resume Next
     AdimlariGuncelle pnl, (engel > 0 Or dahil = 0), (bekleyen > 0)
-    shp.TextFrame2.TextRange.Text = Replace(metin, vbLf, "  |  ")
+    shp.TextFrame2.TextRange.Text = metin
     shp.TextFrame2.TextRange.Font.Fill.ForeColor.RGB = Palet(prMetin)
     If engel > 0 Then
         renk = Palet(prEngelZemin)

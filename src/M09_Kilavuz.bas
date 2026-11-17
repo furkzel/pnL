@@ -574,7 +574,12 @@ End Sub
 
 
 Private Sub K01()
-    KBolum 1, "Bu ara#c ne yapar?"
+    KBolum 1, "1 dakikada ba#sla"
+    KSatir "N", "1  Kaynak ve ana dosyay#i a#c#in, Panel se#cimlerini yap#ip Yenile'ye bas#in."
+    KSatir "N", "2  E#sle#stir'e bas#in; mor #onerileri kontrol edip onaylay#in."
+    KSatir "N", "3  #On Kontrol'u #cal#i#st#ir#in; ENGEL ve D#IKKAT maddelerini okuyun."
+    KSatir "N", "4  AKTAR ve onay ad#imlar#in#i tamamlay#in; iki dosyay#i da kaydedin."
+    KSatir "A", "Bu ara#c ne yapar?"
     KSatir "P", "Kapan#i#s d#oneminde her ay gelen hasar dosyalar#i (#odenen, muallak ...) birikimli ""ana dosya""lara eklenir. Ayl#ik dosyalarla ana dosyan#in s#utun adlar#i ve s#iralar#i birebir tutmaz; bu ara#c her ayl#ik s#utunu ana dosyadaki do#gru s#utuna E#SLEYEREK kopyalar."
     KSatir "M", "S#utunlar#i ad#iyla e#sle#stirir (birebir ad, benzer ad, #o#grenilmi#s eski adlar)."
     KSatir "M", "Aktarmadan #once her #seyi denetler: eksik s#utun, ayn#i hedefe iki kaynak, veri tipi uyu#smazl#i#g#i, bo#s kalacak zorunlu (ye#sil) s#utun, alttaki toplam sat#ir#i, tarih sorunlar#i."
@@ -606,7 +611,8 @@ End Sub
 
 Private Sub K03()
     KBolum 3, "Panel ekran#in#i tan#iyal#im"
-    KSatir "A", "#Ust #serit: #u#c a#samal#i i#s ak#i#s#i"
+    KSatir "A", "#Ust #serit: d#ort ad#im"
+    KSatir "P", "Panel, set, profil, #oneri, yama ve yard#im komutlar#i Di#ger men#us#undedir. Geri Al ayr#i, k#irm#iz#i #cer#cevelidir."
     KSatir "P", "NUMARALI d#ort buton yolu g#osterir: 1 YEN#ILE  #>  2 Otomatik E#sle#stir  #>  3 #On Kontrol  #>  4 AKTAR."
     KSatir "T", "1 #* HAZIRLA | YEN#ILE (dosyalar#i, sayfalar#i, s#utunlar#i okur), + Panel / " & ChrW(8722) & " Panel, Set Y#ukle / Kaydet, k#u#c#uk Set Sil."
     KSatir "T", "2 #* E#SLE#ST#IR & DO#GRULA | Otomatik E#sle#stir, #On Kontrol (hi#cbir #sey yazmadan aktar#im#i dener), #Oneri Onayla (ak#ill#i: se#cili sat#irlarda #oneri varsa onlar#i, yoksa paneldeki hepsini), Profil Kaydet."
@@ -614,7 +620,7 @@ Private Sub K03()
     KSatir "T", "PANEL #* YARDIM | " & ChrW(9664) & " " & ChrW(9654) & " paneller aras#inda gezinir; ortadaki g#osterge ""AKT#IF"" paneli g#osterir (butonlar hep bu panel i#cin #cal#i#s#ir). K#ILAVUZ, Tan#i."
     KSatir "T", "#Seritte olmayanlar | Alt+F8 ile: ProfilSil, MenuleriTazele (zaten otomatik), IsaretleriTemizle (SE#C i#saretlerini siler), ButonlariYenile, PaneliYenidenKur."
     KSatir "A", "#Cift t#iklama k#isayollar#i"
-    KSatir "M", "Turuncu #ONER#I h#ucresine #cift t#iklay#in: #oneri hemen onaylan#ir."
+    KSatir "M", "Mor #ONER#I h#ucresine #cift t#iklay#in: #oneri hemen onaylan#ir."
     KSatir "M", "#I#SLEM h#ucresine #cift t#iklay#in: SE#C a#c#il#ir / kapan#ir (FORM#UL i#saretine dokunmaz)."
     KSatir "M", """Bu paneli aktar"" de#gerine #cift t#iklay#in: Evet / Hay#ir de#gi#sir, renk hemen d#oner."
     KSatir "M", "HEDEF HAR#ITASI'nda dolmayan bir s#utuna (#ozellikle k#irm#iz#i ""<< YES#IL, BO#STA"") #cift t#iklay#in: s#utun SAB#IT DE#GERLER'e eklenir ve DE#GER h#ucresine gidilir; yaln#izca de#geri yazars#in#iz."

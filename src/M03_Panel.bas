@@ -643,10 +643,10 @@ Public Sub ButonlariKur(ByVal pnl As Worksheet)
     SekilleriSil pnl
     PanelSatirYukseklikleri pnl
     pnl.Range(pnl.Cells(1, 1), pnl.Cells(SERIT_SON_SATIR, TEMIZLIK_SON_SUTUN)).Interior.Color = Palet(prYuzey)
-    MetinKutusu pnl, "AP_BASLIK", TR("AKTARIM PANEL#I"), SERIT_SOL, pnl.Rows(1).Top, _
-                 SERIT_BUTON_GENISLIK * 2, pnl.Rows(1).Height, 12, Palet(prMetin), True
-    MetinKutusu pnl, GOSTERGE_ADI, "PANEL 1", SERIT_SOL + SERIT_BUTON_GENISLIK * 2, pnl.Rows(1).Top, _
-                 SERIT_BUTON_GENISLIK * 2, pnl.Rows(1).Height, 10, Palet(prIkincilMetin), True
+    MetinKutusu pnl, "AP_BASLIK", TR("AKTARIM PANEL#I"), SERIT_SOL, pnl.Rows(2).Top, _
+                 SERIT_BUTON_GENISLIK * 2, pnl.Rows(2).Height, 12, Palet(prMetin), True
+    MetinKutusu pnl, GOSTERGE_ADI, "PANEL 1", SERIT_SOL + SERIT_BUTON_GENISLIK * 2, pnl.Rows(2).Top, _
+                 SERIT_BUTON_GENISLIK * 2, pnl.Rows(2).Height, 10, Palet(prIkincilMetin), True
     makrolar = Array("Yenile", "OtomatikEslestir", "OnKontrol", "Aktar", "DigerMenu", "DenetimOzeti", "GeriAl")
     adlar = Array(TR("1  Yenile"), TR("2  E#sle#stir"), TR("3  #On Kontrol"), "4  AKTAR", _
                  TR("Di#ger ") & ChrW(9662), "Denetim", TR("Geri Al"))
@@ -661,9 +661,10 @@ Public Sub ButonlariKur(ByVal pnl As Worksheet)
             shp.TextFrame2.TextRange.Font.Fill.ForeColor.RGB = Palet(prEngel)
         End If
     Next i
-    MetinKutusu pnl, HAZIRLIK_ADI, TR("Haz#irl#ik"), SERIT_SOL, pnl.Rows(5).Top, _
-                 SERIT_BUTON_GENISLIK * 4, pnl.Rows(5).Height, 9, Palet(prMetin), True
+    MetinKutusu pnl, HAZIRLIK_ADI, TR("Haz#irl#ik"), SERIT_SOL, pnl.Rows(4).Top, _
+                 SERIT_BUTON_GENISLIK * 4, pnl.Rows(4).Height, 9, Palet(prMetin), True
     pnl.Shapes(HAZIRLIK_ADI).OnAction = "HazirlikGoster"
+    pnl.Shapes(HAZIRLIK_ADI).TextFrame2.WordWrap = -1
     makrolar = Array("YeniPanelEkle", "PanelKaldir", "PanelOnceki", "PanelSonraki", "SetYukle", "SetKaydet", "SetSil", _
                      "OneriOnayla", "ProfilKaydet", "AktarSecili", "TutarMutabakatiSon", "Yardim", "Tani")
     adlar = Array("+ Panel", TR("Panel kald#ir"), TR("#Onceki panel"), "Sonraki panel", TR("Set y#ukle"), "Set kaydet", "Set sil", _
@@ -923,6 +924,7 @@ Public Sub AktifPanelGoster(ByVal pnl As Worksheet, ByVal k As Long)
     pnl.Shapes(GOSTERGE_ADI).TextFrame2.TextRange.Text = metin
 
     g_SonAktifBlok = k
+    HazirlikGuncelle pnl
     On Error GoTo 0
 
 End Sub

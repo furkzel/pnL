@@ -20,8 +20,6 @@ Option Private Module
 '   ALAN         : AlanTemizle (Cells.Clear yerine)
 ' ============================================================
 
-Public Const PANEL_YAZI_TIPI As String = "Segoe UI"
-Public Const PANEL_YAZI_BOYUT As Long = 9
 
 
 ' ============================================================

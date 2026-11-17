@@ -45,7 +45,9 @@ Option Private Module
 '   - IIf iki dali da hesaplar; Nothing olabilecek nesnede kullanma.
 ' ============================================================
 
-Public Const SURUM As String = "v1.0"
+Public Const SURUM As String = "v1.1-dev"
+Public Const PANEL_YAZI_TIPI As String = "Calibri"
+Public Const PANEL_YAZI_BOYUT As Double = 9.5
 
 ' Panel duzeni isareti (calisma kitabi adi). v33 panelinde yoktur.
 Public Const DUZEN_ADI As String = "AP_DUZEN"
