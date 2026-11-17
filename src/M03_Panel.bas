@@ -329,11 +329,15 @@ Public Sub BlokCiz(ByVal pnl As Worksheet, ByVal k As Long)
     EtiketYaz pnl, SATIR_TUTAR, c, TR("Tutar s#utunu (mutabakat)"), False
     EtiketYaz pnl, SATIR_HASAR, c, TR("Hasar tarihi s#utunu"), False
     EtiketYaz pnl, SATIR_IHBAR, c, TR("#Ihbar tarihi s#utunu"), False
+    EtiketYaz pnl, SATIR_ANAHTAR, c, TR("Anahtar s#utunu (hasar no)"), False
+    EtiketYaz pnl, SATIR_KIRILIM, c, TR("K#ir#il#im s#utunu (bran#s)"), False
+    EtiketYaz pnl, SATIR_DONEM, c, TR("Rapor d#onemi sonu (bo#s = ge#cen ay)"), False
 
     ' --- Ayar (deger) hucreleri ---
     ayarSatirlari = Array(SATIR_DAHIL, SATIR_KAYNAK_DOSYA, SATIR_KAYNAK_SAYFA, SATIR_SON_SATIR, _
                           SATIR_HEDEF_DOSYA, SATIR_HEDEF_SAYFA, SATIR_YAZIM, _
-                          SATIR_PROFIL, SATIR_TUTAR, SATIR_HASAR, SATIR_IHBAR)
+                          SATIR_PROFIL, SATIR_TUTAR, SATIR_HASAR, SATIR_IHBAR, _
+                          SATIR_ANAHTAR, SATIR_KIRILIM, SATIR_DONEM)
     For i = 0 To UBound(ayarSatirlari)
         r = ayarSatirlari(i)
         With pnl.Cells(r, c + OFS_AYAR)
@@ -351,6 +355,8 @@ Public Sub BlokCiz(ByVal pnl As Worksheet, ByVal k As Long)
     pnl.Cells(SATIR_KAYNAK_SAYFA, c + OFS_AYAR).NumberFormat = "@"
     pnl.Cells(SATIR_HEDEF_DOSYA, c + OFS_AYAR).NumberFormat = "@"
     pnl.Cells(SATIR_HEDEF_SAYFA, c + OFS_AYAR).NumberFormat = "@"
+    pnl.Cells(SATIR_DONEM, c + OFS_AYAR).NumberFormat = "dd.mm.yyyy"
+    pnl.Cells(SATIR_DONEM, c + OFS_AYAR).HorizontalAlignment = xlLeft
 
     If AyarMetni(pnl, k, SATIR_DAHIL) = "" Then Ayar(pnl, k, SATIR_DAHIL).Value = HayirMetni()
     If AyarMetni(pnl, k, SATIR_YAZIM) = "" Then Ayar(pnl, k, SATIR_YAZIM).Value = YazimMetni(ymSayfaSonu)

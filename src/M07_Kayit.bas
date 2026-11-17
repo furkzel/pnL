@@ -44,6 +44,7 @@ Public Sub GeriAl()
     Dim sonHedefWs As Worksheet, sonHedefWb As Workbook
     Dim yeniSonSatir As Long
     Dim hataMetni As String
+    Dim kilitSahip As String, kilitZaman As String
 
     Set pnl = PanelSayfasi()
     GecmisSayfasiHazirla
@@ -124,6 +125,8 @@ Public Sub GeriAl()
                     sorun = sorun & "- Sayfa bulunamadi: " & GuvenliMetin(v(i, G_HEDEF_SAYFA)) & vbNewLine
                 ElseIf hedefWb.ReadOnly Then
                     sorun = sorun & "- Ana dosya SALT OKUNUR acik: " & hedefWb.Name & vbNewLine
+                ElseIf KilitBaskasinda(hedefWb, kilitSahip, kilitZaman) Then
+                    sorun = sorun & "- Ana dosya KILITLI: " & kilitSahip & " (" & kilitZaman & ")" & vbNewLine
                 ElseIf gNo = 0 Or ilkS < 2 Or sonS < ilkS Then
                     sorun = sorun & "- Gecmis kaydi okunamadi (satir " & (i + 1) & ")" & vbNewLine
                 Else
@@ -135,6 +138,9 @@ Public Sub GeriAl()
                     If kayitliAd <> "" And BH(kayitliAd) <> BH(mevcutAd) Then
                         sorun = sorun & "- " & sutunHarf & " sutununun basligi degismis: aktarimda '" & _
                                 kayitliAd & "', simdi '" & mevcutAd & "'" & vbNewLine
+                    ElseIf Left$(yedekRef, 8) = "SILINDI:" Then
+                        sorun = sorun & "- " & sutunHarf & " sutununun yedegi saklama politikasi geregi silinmis (" & _
+                                yedekRef & "); bu aktarim artik geri alinamaz" & vbNewLine
                     ElseIf yedekRef <> "" And Not YedekVarMi(yedekRef) Then
                         sorun = sorun & "- " & sutunHarf & " sutununun yedegi (Yedek!" & yedekRef & ") bulunamadi" & vbNewLine
                     Else
@@ -143,7 +149,7 @@ Public Sub GeriAl()
                         If kayitliImza = "?" Then
                             sorun = sorun & "- Gecersiz parmak izi: " & sutunHarf & vbNewLine
                         ElseIf kayitliImza <> IMZA_YOK Then
-                            If AralikImzasi(hedefWs, gNo, ilkS, sonS, (Left$(kayitliImza, 2) = "F;"), (Mid$(kayitliImza, 3, 6) <> "CRC32=")) <> kayitliImza Then
+                            If AralikImzasi(hedefWs, gNo, ilkS, sonS, (Left$(kayitliImza, 2) = "F;"), ImzaSurumu(kayitliImza)) <> kayitliImza Then
                                 imzaFarki = imzaFarki & "   " & sutunHarf & " (" & GuvenliMetin(v(i, G_KAYNAK_SUTUN)) & _
                                             ") satir " & ilkS & " - " & sonS & vbNewLine
                             End If
@@ -314,6 +320,21 @@ Private Function PartiAktarimSayisi(ByVal v As Variant, ByVal parti As Long) As 
 End Function
 
 
+' Kayitli imzanin hangi algoritmayla uretildigi:
+'   "V;n=..."      v1.0 ozeti (adet, toplam, ilk/son)
+'   "V;CRC32=..."  v1.1-dev taslagi (karakter bazli CRC32)
+'   "V;C2=..."     v1.1 (tip etiketli hizli CRC32, M12_Butunluk)
+Public Function ImzaSurumu(ByVal imza As String) As String
+    If Mid$(imza, 3, 3) = "C2=" Then
+        ImzaSurumu = "C2"
+    ElseIf Mid$(imza, 3, 6) = "CRC32=" Then
+        ImzaSurumu = "CRC32"
+    Else
+        ImzaSurumu = "n"
+    End If
+End Function
+
+
 ' ============================================================
 '  PARMAK IZI
 '
@@ -323,7 +344,7 @@ End Function
 '  yazilir: bolgesel ayardan (virgul/nokta) etkilenmez.
 ' ============================================================
 Public Function AralikImzasi(ByVal ws As Worksheet, ByVal sutun As Long, ByVal ilk As Long, _
-                             ByVal son As Long, ByVal formulMu As Boolean, Optional ByVal eski As Boolean = False) As String
+                             ByVal son As Long, ByVal formulMu As Boolean, Optional ByVal surum As String = "C2") As String
 
     Dim rng As Range
     Dim v As Variant, x As Variant
@@ -344,7 +365,10 @@ Public Function AralikImzasi(ByVal ws As Worksheet, ByVal sutun As Long, ByVal i
         v(1, 1) = x
     End If
 
-    If Not eski Then
+    If surum = "C2" Then
+        AralikImzasi = IIf(formulMu, "F;", "V;") & "C2=" & HizliKarma(v)
+        Exit Function
+    ElseIf surum = "CRC32" Then
         AralikImzasi = IIf(formulMu, "F;", "V;") & "CRC32=" & DiziKarmasi(v)
         Exit Function
     End If
@@ -410,8 +434,7 @@ Public Function AralikYedekle(ByVal rng As Range, ByVal aktarimNo As Long, ByVal
     n = rng.Rows.Count
     If n + 1 > ws.Rows.Count Then Err.Raise vbObjectError + 513, , "Yedek icin aralik cok buyuk"
 
-    col = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
-    If Trim$(GuvenliMetin(ws.Cells(1, col).Value)) <> "" Then col = col + 1
+    col = YedekBosSutun(ws)
     If col > ws.Columns.Count Then Err.Raise vbObjectError + 514, , "Yedek sayfasi dolu (16.384 sutun)"
 
     v = IkiBoyutlu(rng)
@@ -440,6 +463,71 @@ Public Function AralikYedekle(ByVal rng As Range, ByVal aktarimNo As Long, ByVal
     AralikYedekle = SutunHarfi(col)
 
 End Function
+
+
+' Ilk bos yedek sutunu (saklama politikasinin bosalttigi sutunlar yeniden kullanilir)
+Private Function YedekBosSutun(ByVal ws As Worksheet) As Long
+    Dim son As Long, i As Long
+    Dim v As Variant
+    son = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+    If son = 1 And Trim$(GuvenliMetin(ws.Cells(1, 1).Value)) = "" Then
+        YedekBosSutun = 1
+        Exit Function
+    End If
+    v = IkiBoyutlu(ws.Range(ws.Cells(1, 1), ws.Cells(1, son)))
+    For i = 1 To son
+        If Trim$(GuvenliMetin(v(1, i))) = "" Then
+            YedekBosSutun = i
+            Exit Function
+        End If
+    Next i
+    YedekBosSutun = son + 1
+End Function
+
+
+' M14: son N parti (Ayarlar: YEDEK_PARTI) disindaki partilerin yedekleri
+' silinir; Gecmis'te YEDEK "SILINDI:<ref>" olur ve Rapor'a yazilir.
+' Geri Al yalnizca en son etkin partiden geriye calistigi icin daha eski
+' partilerin yedegine pratikte ulasilmaz; politika bunu acikca yazar.
+Public Sub YedekSaklamaUygula()
+
+    Dim gec As Worksheet, ws As Worksheet
+    Dim son As Long, i As Long, enBuyuk As Long, sinir As Long, col As Long, n As Long, silinen As Long
+    Dim v As Variant
+    Dim ref As String
+
+    On Error GoTo Cikis
+    If Not SayfaVarMi(SAYFA_YEDEK) Or Not SayfaVarMi(SAYFA_GECMIS) Then Exit Sub
+    Set gec = ThisWorkbook.Worksheets(SAYFA_GECMIS)
+    Set ws = ThisWorkbook.Worksheets(SAYFA_YEDEK)
+    son = gec.Cells(gec.Rows.Count, G_PARTI).End(xlUp).Row
+    If son < 2 Then Exit Sub
+    v = IkiBoyutlu(gec.Range(gec.Cells(2, 1), gec.Cells(son, G_SON_SUTUN)))
+    For i = 1 To UBound(v, 1)
+        If GuvenliSayi(v(i, G_PARTI)) > enBuyuk Then enBuyuk = GuvenliSayi(v(i, G_PARTI))
+    Next i
+    sinir = enBuyuk - CLng(Esik(ekYedekParti))
+    If sinir < 1 Then Exit Sub
+    For i = 1 To UBound(v, 1)
+        ref = Trim$(GuvenliMetin(v(i, G_YEDEK)))
+        If ref <> "" And Left$(ref, 8) <> "SILINDI:" And GuvenliSayi(v(i, G_PARTI)) <= sinir Then
+            col = SutunNo(ref)
+            If col > 0 Then
+                n = GuvenliSayi(v(i, G_SATIR_SAYISI))
+                If n < 1 Then n = ws.Cells(ws.Rows.Count, col).End(xlUp).Row
+                ws.Range(ws.Cells(1, col), ws.Cells(n + 1, col)).ClearContents
+            End If
+            gec.Cells(i + 1, G_YEDEK).Value = "SILINDI:" & ref
+            silinen = silinen + 1
+        End If
+    Next i
+    If silinen > 0 Then
+        OlayYaz "YEDEK", 0, 0, 0, silinen & " sutunun yedegi saklama politikasi geregi silindi (parti <= " & sinir & _
+                "; son " & CLng(Esik(ekYedekParti)) & " parti saklanir).", "Bu partiler artik geri alinamaz"
+    End If
+Cikis:
+
+End Sub
 
 
 Private Function YedekVarMi(ByVal ref As String) As Boolean
@@ -840,7 +928,7 @@ Public Sub RaporSayfasiHazirla()
         End With
     End If
 
-    ' v1.0: kontrol noktasi sutunu (K1..K8 + seviye), denetci filtresi icin
+    ' v1.0: kontrol noktasi sutunu (K1..K14 + seviye), denetci filtresi icin
     If Trim$(GuvenliMetin(rpr.Cells(1, R_KONTROL).Value)) = "" Then
         rpr.Cells(1, R_KONTROL).Value = "KONTROL NOKTASI"
         With rpr.Cells(1, R_KONTROL)
@@ -850,6 +938,30 @@ Public Sub RaporSayfasiHazirla()
         End With
     End If
 
+    ' v1.1: kaynak soyu, izler, sure, adet, kalite, metrikler
+    If Trim$(GuvenliMetin(rpr.Cells(1, R_KAYNAK_YOL).Value)) = "" Then
+        RaporV11Basliklari rpr
+    End If
+
+End Sub
+
+
+Private Sub RaporV11Basliklari(ByVal rpr As Worksheet)
+    Dim basliklar As Variant
+    Dim i As Long
+    basliklar = Array("KAYNAK YOL", "KAYNAK BOYUT", "KAYNAK DEGISTIRILME", "KAYNAK KARMA", "ICERIK IZI", _
+                      "SURE (ms)", "ADET MUTABAKATI", "KALITE", "METRIKLER")
+    For i = 0 To UBound(basliklar)
+        rpr.Cells(1, R_KAYNAK_YOL + i).Value = basliklar(i)
+    Next i
+    With rpr.Range(rpr.Cells(1, R_KAYNAK_YOL), rpr.Cells(1, R_SON))
+        .Font.Bold = True
+        .Interior.Color = Palet(prTabloBaslik)
+        .ColumnWidth = 16
+    End With
+    rpr.Columns(R_KAYNAK_YOL).ColumnWidth = 40
+    rpr.Columns(R_ADET).ColumnWidth = 30
+    rpr.Columns(R_METRIK).ColumnWidth = 60
 End Sub
 
 
@@ -890,6 +1002,7 @@ Private Sub RaporBasligiYaz(ByVal rpr As Worksheet)
     rpr.Range(rpr.Columns(R_KAYNAK_DOSYA), rpr.Columns(R_SON)).ColumnWidth = 16
     rpr.Columns(R_MUTABAKAT).ColumnWidth = 40
     rpr.Columns(R_FILTRE).ColumnWidth = 30
+    RaporV11Basliklari rpr
     rpr.Rows(1).WrapText = False
 
 End Sub
@@ -1026,15 +1139,121 @@ Cikis:
 End Function
 
 
+' v1.1 ek alanlari (soy, izler, sure, adet, kalite, metrikler)
+Public Sub RaporEkAlanlar(ByVal satir As Long, ByVal yol As String, ByVal boyut As Double, ByVal zaman As String, _
+                          ByVal karma As String, ByVal icerik As String, ByVal sureMs As Double, _
+                          ByVal adet As String, ByVal kalite As Double, ByVal metrik As String)
+    Dim rpr As Worksheet
+    If satir < 2 Then Exit Sub
+    On Error Resume Next
+    Set rpr = ThisWorkbook.Worksheets(SAYFA_RAPOR)
+    If yol <> "" Then rpr.Cells(satir, R_KAYNAK_YOL).Value = HucreMetni(yol)
+    If boyut > 0 Then rpr.Cells(satir, R_KAYNAK_BOYUT).Value = boyut
+    If zaman <> "" Then rpr.Cells(satir, R_KAYNAK_ZAMAN).Value = "'" & zaman
+    If karma <> "" Then rpr.Cells(satir, R_KAYNAK_KARMA).Value = "'" & karma
+    If icerik <> "" Then rpr.Cells(satir, R_ICERIK_IZI).Value = "'" & icerik
+    If sureMs > 0 Then rpr.Cells(satir, R_SURE_MS).Value = sureMs
+    If adet <> "" Then
+        rpr.Cells(satir, R_ADET).Value = HucreMetni(adet)
+        If Left$(adet, 7) = "TUTUYOR" Then
+            rpr.Cells(satir, R_ADET).Interior.Color = Palet(prOkZemin)
+        ElseIf Left$(adet, 8) = "FARK VAR" Then
+            rpr.Cells(satir, R_ADET).Interior.Color = Palet(prEngelZemin)
+        End If
+    End If
+    If kalite >= 0 Then rpr.Cells(satir, R_KALITE).Value = kalite
+    If metrik <> "" Then rpr.Cells(satir, R_METRIK).Value = "'" & metrik
+    On Error GoTo 0
+End Sub
+
+
+' Ayni ana dosya sayfasina ayni icerik iziyle yapilmis ETKIN aktarimlar
+Public Function IcerikIziBul(ByVal hedefDosya As String, ByVal hedefSayfa As String, ByVal izi As String) As String
+
+    Dim rpr As Worksheet
+    Dim son As Long, i As Long, sayac As Long
+    Dim v As Variant
+    Dim aktifler As Sozluk
+
+    If izi = "" Then Exit Function
+    RaporSayfasiHazirla
+    Set rpr = ThisWorkbook.Worksheets(SAYFA_RAPOR)
+    son = rpr.Cells(rpr.Rows.Count, R_TARIH).End(xlUp).Row
+    If son < 2 Then Exit Function
+    Set aktifler = AktifAktarimlar()
+    v = IkiBoyutlu(rpr.Range(rpr.Cells(2, 1), rpr.Cells(son, R_SON)))
+    For i = UBound(v, 1) To 1 Step -1
+        If GuvenliMetin(v(i, R_OLAY)) = "AKTARIM" And GuvenliMetin(v(i, R_ICERIK_IZI)) = izi And _
+           BH(Trim$(GuvenliMetin(v(i, R_HEDEF_DOSYA)))) = BH(hedefDosya) And _
+           BH(Trim$(GuvenliMetin(v(i, R_HEDEF_SAYFA)))) = BH(hedefSayfa) Then
+            If aktifler.Exists(Trim$(GuvenliMetin(v(i, R_AKTARIM)))) Then
+                sayac = sayac + 1
+                If sayac <= 3 Then
+                    IcerikIziBul = IcerikIziBul & TarihMetni(v(i, R_TARIH)) & "  aktarim " & GuvenliMetin(v(i, R_AKTARIM)) & _
+                                   " (" & GuvenliMetin(v(i, R_KAYNAK_DOSYA)) & " / " & GuvenliMetin(v(i, R_KAYNAK_SAYFA)) & "); "
+                End If
+            End If
+        End If
+    Next i
+
+End Function
+
+
+' K11: ayni hedef + ayni panelden ETKIN aktarimlarin son 12 takvim ayi
+' (icinde bulunulan ay haric). Dizi 1 = gecen ay ... 12 = 12 ay once.
+Public Sub AylikGecmis(ByVal hedefDosya As String, ByVal hedefSayfa As String, ByVal panelNo As Long, _
+                       ByVal bugun As Date, aylikN() As Double, aylikT() As Double, _
+                       ayVar() As Boolean, tutarVar() As Boolean)
+
+    Dim rpr As Worksheet
+    Dim son As Long, i As Long, ay As Long
+    Dim v As Variant
+    Dim aktifler As Sozluk
+    Dim buAy As Date
+
+    ReDim aylikN(1 To 12)
+    ReDim aylikT(1 To 12)
+    ReDim ayVar(1 To 12)
+    ReDim tutarVar(1 To 12)
+    RaporSayfasiHazirla
+    Set rpr = ThisWorkbook.Worksheets(SAYFA_RAPOR)
+    son = rpr.Cells(rpr.Rows.Count, R_TARIH).End(xlUp).Row
+    If son < 2 Then Exit Sub
+    Set aktifler = AktifAktarimlar()
+    buAy = DateSerial(Year(bugun), Month(bugun), 1)
+    v = IkiBoyutlu(rpr.Range(rpr.Cells(2, 1), rpr.Cells(son, R_SON)))
+    For i = 1 To UBound(v, 1)
+        If GuvenliMetin(v(i, R_OLAY)) = "AKTARIM" And IsDate(v(i, R_TARIH)) Then
+            If GuvenliSayi(v(i, R_PANEL)) = panelNo And _
+               BH(Trim$(GuvenliMetin(v(i, R_HEDEF_DOSYA)))) = BH(hedefDosya) And _
+               BH(Trim$(GuvenliMetin(v(i, R_HEDEF_SAYFA)))) = BH(hedefSayfa) Then
+                If aktifler.Exists(Trim$(GuvenliMetin(v(i, R_AKTARIM)))) Then
+                    ay = DateDiff("m", CDate(v(i, R_TARIH)), buAy)
+                    If ay >= 1 And ay <= 12 Then
+                        ayVar(ay) = True
+                        aylikN(ay) = aylikN(ay) + GuvenliSayi(v(i, R_SATIR))
+                        If IsNumeric(v(i, R_AYLIK_TOPLAM)) And Trim$(GuvenliMetin(v(i, R_AYLIK_TOPLAM))) <> "" Then
+                            tutarVar(ay) = True
+                            aylikT(ay) = aylikT(ay) + CDbl(v(i, R_AYLIK_TOPLAM))
+                        End If
+                    End If
+                End If
+            End If
+        End If
+    Next i
+
+End Sub
+
+
 ' Basarili bir aktarimi Rapor'a AKTARIM olayi olarak yazar
-Public Sub RaporYaz(ByVal partiNo As Long, ByVal aktarimNo As Long, ByVal k As Long, _
+Public Function RaporYaz(ByVal partiNo As Long, ByVal aktarimNo As Long, ByVal k As Long, _
                     ByVal kaynakDosya As String, ByVal kaynakSayfa As String, _
                     ByVal hedefDosya As String, ByVal hedefSayfa As String, _
                     ByVal kaynakSonSatir As Long, ByVal aktarilanSatir As Long, _
                     ByVal sutunSayisi As Long, ByVal hedefIlk As Long, ByVal hedefSon As Long, _
                     ByVal filtre As String, ByVal sabit As String, ByVal mutabakat As String, _
                     ByVal tutarVar As Boolean, ByVal kaynakToplam As Double, ByVal tutarHedefHarf As String, _
-                    ByVal yazilanToplam As Double, ByVal hedefOnceki As Double, ByVal hedefYeni As Double)
+                    ByVal yazilanToplam As Double, ByVal hedefOnceki As Double, ByVal hedefYeni As Double) As Long
 
     Dim rpr As Worksheet
     Dim yaz As Long
@@ -1043,7 +1262,8 @@ Public Sub RaporYaz(ByVal partiNo As Long, ByVal aktarimNo As Long, ByVal k As L
                   SayiMetni(aktarilanSatir) & " satir, " & sutunSayisi & _
                   " sutun  ->  ana dosya satir " & SayiMetni(hedefIlk) & " - " & SayiMetni(hedefSon), _
                   mutabakat, kaynakDosya, kaynakSayfa, hedefDosya, hedefSayfa)
-    If yaz = 0 Then Exit Sub
+    RaporYaz = yaz
+    If yaz = 0 Then Exit Function
 
     On Error Resume Next
     Set rpr = ThisWorkbook.Worksheets(SAYFA_RAPOR)
@@ -1070,7 +1290,7 @@ Public Sub RaporYaz(ByVal partiNo As Long, ByVal aktarimNo As Long, ByVal k As L
     End If
     On Error GoTo 0
 
-End Sub
+End Function
 
 
 ' ============================================================

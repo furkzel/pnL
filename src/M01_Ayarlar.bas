@@ -228,6 +228,7 @@ Public Const TABAKA_TOHUM As Long = 20260917 ' M9: rastgele parca icin sabit toh
 Public Const BILDIRIM_TUTULAN As Long = 200  ' Bellek'te tutulan son bildirim
 Public Const BILDIRIM_GOSTERILEN As Long = 5 ' serit listesinde gosterilen
 Public Const KILIT_UZANTI As String = ".aplock"
+Public Const PARA_SINIR As Double = 900000000000000#   ' Currency guvenli sinir (~9,2E14)
 
 ' Veri kalitesi skoru agirliklari (toplam 100; DN-06). Uygulanamayan
 ' bilesenin agirligi digerlerine oransal dagitilir.
@@ -505,6 +506,7 @@ Public Enum PaletRenk
     prEngelZemin
     prOneriMetin
     prOneriZemin
+    prPasifMetin
 End Enum
 
 ' ------------------------------------------------------------
@@ -580,6 +582,7 @@ Public Function Palet(ByVal renk As PaletRenk) As Long
         Case prEngelZemin: Palet = RGB(254, 226, 226)
         Case prOneriMetin: Palet = RGB(109, 40, 217)
         Case prOneriZemin: Palet = RGB(237, 233, 254)
+        Case prPasifMetin: Palet = RGB(100, 116, 139)
         Case Else:              Palet = RGB(255, 255, 255)
     End Select
 

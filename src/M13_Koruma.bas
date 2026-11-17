@@ -22,7 +22,7 @@ Public Sub KorumalariUygula()
                         c = BlokSutun(k)
                         For Each r In Array(SATIR_DAHIL, SATIR_KAYNAK_DOSYA, SATIR_KAYNAK_SAYFA, SATIR_SON_SATIR, _
                                             SATIR_HEDEF_DOSYA, SATIR_HEDEF_SAYFA, SATIR_YAZIM, SATIR_PROFIL, _
-                                            SATIR_TUTAR, SATIR_HASAR, SATIR_IHBAR)
+                                            SATIR_TUTAR, SATIR_HASAR, SATIR_IHBAR, SATIR_ANAHTAR, SATIR_KIRILIM, SATIR_DONEM)
                             pnl.Cells(CLng(r), c + OFS_AYAR).Locked = False
                         Next r
                         pnl.Range(pnl.Cells(SABIT_ILK, c + OFS_SABIT_SUTUN), pnl.Cells(SABIT_SON, c + OFS_SABIT_DEGER)).Locked = False

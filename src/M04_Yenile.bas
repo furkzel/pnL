@@ -32,7 +32,7 @@ Public Sub YenileCalistir(ByVal sessiz As Boolean)
     Dim pnl As Worksheet
     Dim k As Long, adet As Long
     Dim ozet As String, adim As String
-    Dim bas As Double
+    Dim bas As Double, sureMs As Double
 
     Set pnl = PanelSayfasi()
     If Not PanelHazirMi(pnl) Then Exit Sub
@@ -59,6 +59,10 @@ Public Sub YenileCalistir(ByVal sessiz As Boolean)
     g_SonAktifBlok = 0
     AktifPanelGoster pnl, AktifBlok()
 
+    sureMs = (Timer - bas) * 1000
+    If sureMs < 0 Then sureMs = sureMs + 86400000#
+    RaporEkAlanlar OlayYaz("YENILE", 0, 0, 0, "Yenile: " & adet & " panel, " & Format$(sureMs / 1000, "0.0") & " sn", ""), _
+                   "", 0, "", "", "", Round(sureMs, 0), "", -1, ""
     If sessiz Then Exit Sub
 
     ozet = "YENILE TAMAMLANDI   (acik dosya: " & (Workbooks.Count - 1) & ", " & _
@@ -91,7 +95,7 @@ Public Function PanelHazirMi(ByVal pnl As Worksheet) As Boolean
         Exit Function
     End If
     If Not PanelDuzeniGuncel() Then
-        MsgBox "Panel sayfasi eski (v33 veya oncesi) duzende." & vbNewLine & vbNewLine & _
+        MsgBox "Panel sayfasi eski bir surumun duzeninde (v33 / v34 / v1.0)." & vbNewLine & vbNewLine & _
                "Alt+F8 > SifirdanKur calistir: paneldeki tum ayarlar ve" & vbNewLine & _
                "eslestirmeler korunarak yeni duzene tasinir.", vbExclamation, "Panel"
         Exit Function
@@ -110,8 +114,8 @@ Public Function PanelDuzeniGuncel() As Boolean
     On Error Resume Next
     s = ThisWorkbook.Names(DUZEN_ADI).RefersTo
     On Error GoTo 0
-    ' v1.0 ve onceki yayin (v35) ayni yerlesimi kullanir
-    PanelDuzeniGuncel = (InStr(s, DUZEN_DEGERI) > 0 Or InStr(s, "v35") > 0)
+    ' v1.1: v1.0 / v35 / v34 / v33 panelleri once SifirdanKur ile tasinir
+    PanelDuzeniGuncel = (InStr(s, Chr$(34) & DUZEN_DEGERI & Chr$(34)) > 0)
 End Function
 
 
@@ -223,6 +227,8 @@ Public Function BlokYenile(ByVal pnl As Worksheet, ByVal k As Long) As String
         MenuKur Ayar(pnl, k, SATIR_HASAR), lst, LST_HEDEF_SUTUNLAR
         MenuKur Ayar(pnl, k, SATIR_IHBAR), lst, LST_HEDEF_SUTUNLAR
         MenuKur Ayar(pnl, k, SATIR_TUTAR), lst, LST_HEDEF_SUTUNLAR
+        MenuKur Ayar(pnl, k, SATIR_ANAHTAR), lst, LST_HEDEF_SUTUNLAR
+        MenuKur Ayar(pnl, k, SATIR_KIRILIM), lst, LST_HEDEF_SUTUNLAR
         If Trim$(GuvenliMetin(lst.Cells(1, LST_HEDEF_SUTUNLAR).Value)) <> "" Then
             ayniHedef = AyniAdlar(IkiBoyutlu(lst.Range(lst.Cells(1, LST_HEDEF_SUTUNLAR), _
                         lst.Cells(lst.Cells(lst.Rows.Count, LST_HEDEF_SUTUNLAR).End(xlUp).Row, LST_HEDEF_SUTUNLAR))))
@@ -352,6 +358,23 @@ Public Function KontrolSutunlariniBul(ByVal pnl As Worksheet, ByVal k As Long, B
             metin = metin & "ihbar=" & aday & ", "
         End If
     End If
+    ' v1.1: hasar/dosya numarasi (K9) ve kirilim (K12/K13). Police no
+    ' hasar anahtari degildir; secilmez.
+    If AyarMetni(pnl, k, SATIR_ANAHTAR) = "" Then
+        aday = SutunAdayi(lst, Array("hasarno", "dosyano", "hasardosyano", "claimno", "claimid"), Empty, "hasarno")
+        If aday <> "" Then
+            Ayar(pnl, k, SATIR_ANAHTAR).Value = HucreMetni(aday)
+            metin = metin & "anahtar=" & aday & ", "
+        End If
+    End If
+    If AyarMetni(pnl, k, SATIR_KIRILIM) = "" Then
+        aday = SutunAdayi(lst, Array("brans"), Empty, "brans")
+        If aday = "" Then aday = SutunAdayi(lst, Array("sirket"), Empty, "sirket")
+        If aday <> "" Then
+            Ayar(pnl, k, SATIR_KIRILIM).Value = HucreMetni(aday)
+            metin = metin & "kirilim=" & aday & ", "
+        End If
+    End If
 
     If Len(metin) > 2 Then metin = Left$(metin, Len(metin) - 2)
     KontrolSutunlariniBul = metin
@@ -461,7 +484,12 @@ Public Sub KaynakTara(ByVal pnl As Worksheet, ByVal k As Long, ByVal lst As Work
             If okunan > FILTRE_TARAMA + 1 Then okunan = FILTRE_TARAMA + 1
             v = SutunOku(kaynakWs, j, 2, okunan)
 
-            TipAnalizDizi v, kisa, uzun
+            ' M9: tip, bastan/ortadan/sondan/rastgele tabakali ornekle
+            If sonR - 1 > 4 * TABAKA_PARCA Then
+                TipAnalizDizi TabakaliOrnek(kaynakWs, j, 2, sonR), kisa, uzun
+            Else
+                TipAnalizDizi v, kisa, uzun
+            End If
             tipKisa(j, 1) = kisa
             tipUzun(j, 1) = uzun
 
@@ -1331,6 +1359,8 @@ End Sub
 Public Function BaslikRenkleri(ByVal hedefWs As Worksheet, renkler() As Long, renkVar() As Boolean) As Long
 
     Dim sonSut As Long, i As Long, r As Long
+    Dim meta As Sozluk
+    Dim basliklar As Variant
 
     sonSut = SonSutun(hedefWs, EN_FAZLA_SUTUN)
     If sonSut < 1 Then sonSut = 1
@@ -1341,6 +1371,21 @@ Public Function BaslikRenkleri(ByVal hedefWs As Worksheet, renkler() As Long, re
         renkVar(i) = HucreRengi(hedefWs.Cells(1, i), r)
         renkler(i) = r
     Next i
+
+    ' M10: Ayarlar'da bu sayfa icin ZORUNLU SUTUNLAR tanimliysa renk
+    ' yerine o liste gecerlidir (zorunlu = yesil isaret, digerleri degil).
+    Set meta = ZorunluMeta(hedefWs)
+    If Not meta Is Nothing Then
+        basliklar = IkiBoyutlu(hedefWs.Range(hedefWs.Cells(1, 1), hedefWs.Cells(1, sonSut)))
+        For i = 1 To sonSut
+            renkVar(i) = True
+            If meta.Exists(Normalize(GuvenliMetin(basliklar(1, i)))) Then
+                renkler(i) = Palet(prOk)
+            Else
+                renkler(i) = Palet(prZemin)
+            End If
+        Next i
+    End If
     BaslikRenkleri = sonSut
 
 End Function

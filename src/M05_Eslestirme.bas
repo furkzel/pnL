@@ -1318,6 +1318,9 @@ Public Sub SetKaydet()
             st.Cells(yaz, ST_IHBAR).Value = HucreMetni(AyarMetni(pnl, k, SATIR_IHBAR))
             st.Cells(yaz, ST_YAZIM).Value = AyarMetni(pnl, k, SATIR_YAZIM)
             st.Cells(yaz, ST_SABITLER).Value = HucreMetni(SabitlerMetni(pnl, k))
+            st.Cells(yaz, ST_ANAHTAR).Value = HucreMetni(AyarMetni(pnl, k, SATIR_ANAHTAR))
+            st.Cells(yaz, ST_KIRILIM).Value = HucreMetni(AyarMetni(pnl, k, SATIR_KIRILIM))
+            st.Cells(yaz, ST_DONEM).Value = Ayar(pnl, k, SATIR_DONEM).Value
         End If
     Next k
 Cikis:
@@ -1414,6 +1417,9 @@ Public Sub SetYukle()
                 Ayar(pnl, k, SATIR_HASAR).Value = HucreMetni(GuvenliMetin(st.Cells(i, ST_HASAR).Value))
                 Ayar(pnl, k, SATIR_IHBAR).Value = HucreMetni(GuvenliMetin(st.Cells(i, ST_IHBAR).Value))
                 Ayar(pnl, k, SATIR_YAZIM).Value = YazimMetni(YazimModuOku(st.Cells(i, ST_YAZIM).Value))
+                Ayar(pnl, k, SATIR_ANAHTAR).Value = HucreMetni(GuvenliMetin(st.Cells(i, ST_ANAHTAR).Value))
+                Ayar(pnl, k, SATIR_KIRILIM).Value = HucreMetni(GuvenliMetin(st.Cells(i, ST_KIRILIM).Value))
+                Ayar(pnl, k, SATIR_DONEM).Value = st.Cells(i, ST_DONEM).Value
 
                 ' --- Sabit degerler ---
                 sabitler = GuvenliMetin(st.Cells(i, ST_SABITLER).Value)
@@ -1558,8 +1564,15 @@ Public Sub SetSayfasiHazirla()
         st.Cells(1, ST_SABITLER).Value = "SABIT DEGERLER"
         st.Columns(ST_SABITLER).ColumnWidth = 40
     End If
+    If Trim$(GuvenliMetin(st.Cells(1, ST_ANAHTAR).Value)) = "" Then
+        st.Cells(1, ST_ANAHTAR).Value = "ANAHTAR SUTUN"
+        st.Cells(1, ST_KIRILIM).Value = "KIRILIM SUTUN"
+        st.Cells(1, ST_DONEM).Value = "DONEM SONU"
+        st.Range(st.Columns(ST_ANAHTAR), st.Columns(ST_DONEM)).ColumnWidth = 20
+        st.Columns(ST_DONEM).NumberFormat = "dd.mm.yyyy"
+    End If
 
-    With st.Range(st.Cells(1, 1), st.Cells(1, ST_SABITLER))
+    With st.Range(st.Cells(1, 1), st.Cells(1, ST_SON))
         .Font.Bold = True
         .Interior.Color = Palet(prTabloBaslik)
     End With

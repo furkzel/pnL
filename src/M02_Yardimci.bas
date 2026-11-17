@@ -1033,8 +1033,7 @@ Public Function VeriTipiKaynak(ByVal ws As Worksheet, ByVal no As Long) As Strin
         VeriTipiKaynak = "BOS"
         Exit Function
     End If
-    If son > TIP_ORNEK + 1 Then son = TIP_ORNEK + 1
-    VeriTipiKaynak = VeriTipiDizi(SutunOku(ws, no, 2, son))
+    VeriTipiKaynak = VeriTipiDizi(TabakaliOrnek(ws, no, 2, son))
 
 End Function
 
@@ -1052,9 +1051,54 @@ Public Function VeriTipiHedef(ByVal ws As Worksheet, ByVal no As Long) As String
         VeriTipiHedef = "BOS"
         Exit Function
     End If
-    ilk = son - TIP_ORNEK + 1
+    ' Ana dosyada agirlik guncel veride: son 50.000 satirdan tabakali ornek
+    ilk = son - SABIT_TARAMA + 1
     If ilk < 2 Then ilk = 2
-    VeriTipiHedef = VeriTipiDizi(SutunOku(ws, no, ilk, son))
+    VeriTipiHedef = VeriTipiDizi(TabakaliOrnek(ws, no, ilk, son))
+
+End Function
+
+
+' M9: TABAKALI ORNEK. Aralik kucukse tamami; degilse bastan, ortadan,
+' sondan TABAKA_PARCA satir + sabit tohumlu 4 rastgele pencere (her biri
+' TABAKA_PARCA/4). Dosya sonu ve ortasindaki anomaliler de tipe girer;
+' ayni dosya her seferinde ayni ornegi verir (tekrarlanabilir).
+Public Function TabakaliOrnek(ByVal ws As Worksheet, ByVal no As Long, ByVal ilk As Long, ByVal son As Long) As Variant
+
+    Dim sonuc() As Variant, v As Variant
+    Dim n As Long, i As Long, t As Long, bas As Long, pencere As Long
+    Dim tohum As Double
+
+    If son - ilk + 1 <= 4 * TABAKA_PARCA Then
+        TabakaliOrnek = SutunOku(ws, no, ilk, son)
+        Exit Function
+    End If
+    ReDim sonuc(1 To 4 * TABAKA_PARCA, 1 To 1)
+    pencere = TABAKA_PARCA \ 4
+    For t = 1 To 7
+        Select Case t
+            Case 1: bas = ilk
+            Case 2: bas = ilk + (son - ilk + 1) \ 2 - TABAKA_PARCA \ 2
+            Case 3: bas = son - TABAKA_PARCA + 1
+            Case Else
+                If t = 4 Then tohum = TABAKA_TOHUM
+                tohum = tohum * 16807
+                tohum = tohum - Int(tohum / 2147483647) * 2147483647
+                bas = ilk + Int((tohum / 2147483647) * (son - ilk + 1 - pencere))
+        End Select
+        If t <= 3 Then
+            v = SutunOku(ws, no, bas, bas + TABAKA_PARCA - 1)
+        Else
+            v = SutunOku(ws, no, bas, bas + pencere - 1)
+        End If
+        For i = 1 To UBound(v, 1)
+            If n < UBound(sonuc, 1) Then
+                n = n + 1
+                sonuc(n, 1) = v(i, 1)
+            End If
+        Next i
+    Next t
+    TabakaliOrnek = sonuc
 
 End Function
 

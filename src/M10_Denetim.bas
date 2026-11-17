@@ -4,7 +4,7 @@ Option Explicit
 ' ============================================================
 ' AKTARIM PANELI  v1.0  -  M10_Denetim
 '
-' AKTUERYAL KONTROL NOKTALARI (K1..K8) ve YONETICI GORUNUMU
+' AKTUERYAL KONTROL NOKTALARI (K1..K14) ve YONETICI GORUNUMU
 '
 '   K1 DOSYA, BASLIK & HEDEF   dosya/sayfa erisimi, salt okunur kilit, baslik
 '                              yeri/adi, iki kaynak ayni hedefe, hedef aralik
@@ -15,6 +15,12 @@ Option Explicit
 '   K6 BICIM & KOD KORUMASI    bastaki sifir, 16+ hane, "=..." metin, ##### tasma
 '   K7 TUTAR & MUTABAKAT       bozuk/bos/eksi tutar + 4'lu mutabakat (FARK 0,00)
 '   K8 HASAR & IHBAR TARIHI    ihbar < hasar, bos / bozuk / metin tarih
+'   K9 ANAHTAR TEKILLIGI       anahtar(+tutar+tarih) tekrari, birebir kopya, ana dosya ornegi
+'   K10 DONEM TUTARLILIGI      donem sonundan sonra, makul aralik disi tarih
+'   K11 MAKULLUK               z-skor (12 ay), buyuk hasar, Benford ilk hane
+'   K12 SEMA & KOD KAYMASI     profil/son aktarim semasi, yeni/kaybolan kirilim kodu
+'   K13 KATMANLI MUTABAKAT     kirilim x (adet, tutar sutunlari): kaynak = yazilan
+'   K14 KAYNAK BUTUNLUGU & SOY On Kontrol -> Aktar kaynak izi, kaydedilmemis kaynak
 '
 ' Durumlar (M01_Ayarlar.KD_*): "-" bekliyor, YOK uygulanmaz, OK, DIKKAT, ENGEL.
 '
@@ -24,7 +30,7 @@ Option Explicit
 '   DenetimOzeti                     : "Denetim" sayfasi (yonetici ozeti)
 ' ============================================================
 
-Private Const LST_KARNE As Long = 344          ' Listeler<k>: 1..8 durum, 9 not
+Private Const LST_KARNE As Long = 344          ' Listeler<k>: 1..K_SAYI durum, +1 not, +2 kalite
 
 
 ' ============================================================
@@ -42,6 +48,12 @@ Public Function KontrolAdi(ByVal n As Long) As String
         Case 6: KontrolAdi = TR("Bi#cim & kod korumas#i")
         Case 7: KontrolAdi = TR("Tutar & mutabakat")
         Case 8: KontrolAdi = TR("Hasar / ihbar tarihi")
+        Case 9: KontrolAdi = TR("Anahtar tekilli#gi")
+        Case 10: KontrolAdi = TR("D#onem tutarl#il#i#g#i")
+        Case 11: KontrolAdi = TR("Makull#uk & ayk#ir#i de#ger")
+        Case 12: KontrolAdi = TR("#Sema & kod kaymas#i")
+        Case 13: KontrolAdi = TR("Katmanl#i mutabakat")
+        Case 14: KontrolAdi = TR("Kaynak b#ut#unl#u#g#u & soy")
     End Select
 End Function
 
@@ -57,6 +69,12 @@ Public Function KontrolAdiAscii(ByVal n As Long) As String
         Case 6: KontrolAdiAscii = "BICIM & KOD KORUMASI"
         Case 7: KontrolAdiAscii = "TUTAR & MUTABAKAT"
         Case 8: KontrolAdiAscii = "HASAR & IHBAR TARIHI"
+        Case 9: KontrolAdiAscii = "ANAHTAR TEKILLIGI"
+        Case 10: KontrolAdiAscii = "DONEM TUTARLILIGI"
+        Case 11: KontrolAdiAscii = "MAKULLUK & AYKIRI DEGER"
+        Case 12: KontrolAdiAscii = "SEMA & KOD KAYMASI"
+        Case 13: KontrolAdiAscii = "KATMANLI MUTABAKAT"
+        Case 14: KontrolAdiAscii = "KAYNAK BUTUNLUGU & SOY"
     End Select
 End Function
 
@@ -68,7 +86,7 @@ Public Function KarneSatiri(durum() As String) As String
     Dim s As String
     For n = 1 To K_SAYI
         s = s & "K" & n & " " & durum(n) & IIf(n < K_SAYI, "  ", "")
-        If n = 4 Then s = s & vbNewLine
+        If n = 5 Or n = 10 Then s = s & vbNewLine
     Next n
     KarneSatiri = s
 End Function
@@ -114,7 +132,13 @@ Public Sub KarneCiz(ByVal pnl As Worksheet, ByVal k As Long)
         "K5 veri tipi ve sabit deger tipi" & vbLf & _
         "K6 bastaki sifir, uzun numara, formul metni, #####" & vbLf & _
         "K7 tutar butunlugu ve 4'lu mutabakat" & vbLf & _
-        "K8 hasar / ihbar tarih mantigi" & vbLf & vbLf & _
+        "K8 hasar / ihbar tarih mantigi" & vbLf & _
+        "K9 anahtar tekilligi, birebir kopya satir" & vbLf & _
+        "K10 donem sonu ve makul tarih araligi" & vbLf & _
+        "K11 z-skor, buyuk hasar, Benford" & vbLf & _
+        "K12 sema ve kirilim kodu kaymasi" & vbLf & _
+        "K13 kirilim bazinda adet ve tutar mutabakati" & vbLf & _
+        "K14 On Kontrol -> Aktar kaynak izi ve soy" & vbLf & vbLf & _
         "K1, K4, K5: YENILE ve eslestirmede canli." & vbLf & _
         "Hepsi: 3 On Kontrol ve 4 AKTAR."
     pnl.Cells(KARNE_BASLIK, c).Comment.Visible = False
@@ -125,13 +149,14 @@ Public Sub KarneCiz(ByVal pnl As Worksheet, ByVal k As Long)
     For n = 1 To K_SAYI
         durum(n) = KD_BEKLIYOR
     Next n
-    KarneHucreleri pnl, k, durum, TR("YEN#ILE ve #On Kontrol ile dolar")
+    KarneHucreleri pnl, k, durum, TR("YEN#ILE ve #On Kontrol ile dolar"), -1
 
 End Sub
 
 
 ' Karneyi yazar, Listeler'e saklar ve HAZIRLIK gostergesini tazeler
-Public Sub KarneYaz(ByVal pnl As Worksheet, ByVal k As Long, durum() As String, ByVal notMetni As String)
+Public Sub KarneYaz(ByVal pnl As Worksheet, ByVal k As Long, durum() As String, ByVal notMetni As String, _
+                    Optional ByVal kalite As Double = -1)
 
     Dim lst As Worksheet
     Dim n As Long
@@ -141,49 +166,98 @@ Public Sub KarneYaz(ByVal pnl As Worksheet, ByVal k As Long, durum() As String, 
         lst.Cells(n, LST_KARNE).Value = durum(n)
     Next n
     lst.Cells(K_SAYI + 1, LST_KARNE).Value = HucreMetni(notMetni)
-    KarneHucreleri pnl, k, durum, notMetni
+    lst.Cells(K_SAYI + 2, LST_KARNE).Value = kalite
+    KarneHucreleri pnl, k, durum, notMetni, kalite
     HazirlikGuncelle pnl
 
 End Sub
 
 
-Private Sub KarneHucreleri(ByVal pnl As Worksheet, ByVal k As Long, durum() As String, ByVal notMetni As String)
+Private Sub KarneHucreleri(ByVal pnl As Worksheet, ByVal k As Long, durum() As String, ByVal notMetni As String, _
+                           ByVal kalite As Double)
 
     Dim c As Long, n As Long
     Dim isaret As String
     Dim zemin As Long, yazi As Long
+    Dim dahil As Boolean
+    Dim ok As Long, dikkat As Long, engel As Long, bekleyen As Long
 
     c = BlokSutun(k) + OFS_KARNE
+    dahil = DahilMi(pnl, k)
     For n = 1 To K_SAYI
-        If Not DahilMi(pnl, k) Then
-            isaret = ChrW(8211): zemin = Palet(prYuzey): yazi = Palet(prIkincilMetin)
+        If Not dahil Then
+            isaret = ChrW(8211): zemin = Palet(prZemin): yazi = Palet(prPasifMetin)
         Else
-        Select Case durum(n)
-            Case KD_OK:     isaret = ChrW(10003): zemin = Palet(prDurumHazir): yazi = Palet(prOk)
-            Case KD_DIKKAT: isaret = "!":         zemin = Palet(prDurumUyari): yazi = Palet(prDikkat)
-            Case KD_ENGEL:  isaret = ChrW(10005): zemin = Palet(prDurumHata):  yazi = Palet(prEngel)
-            Case KD_YOK:    isaret = ChrW(8211):  zemin = Palet(prYuzey):  yazi = Palet(prIkincilMetin)
-            Case Else:      isaret = ChrW(9675):  zemin = Palet(prYuzey):  yazi = Palet(prIkincilMetin)
-        End Select
+            Select Case durum(n)
+                Case KD_OK:     isaret = ChrW(10003): zemin = Palet(prZemin):       yazi = Palet(prOk)
+                Case KD_DIKKAT: isaret = "!":         zemin = Palet(prDikkatZemin): yazi = Palet(prDikkat)
+                Case KD_ENGEL:  isaret = ChrW(10005): zemin = Palet(prEngelZemin):  yazi = Palet(prEngel)
+                Case KD_YOK:    isaret = ChrW(8211):  zemin = Palet(prZemin):       yazi = Palet(prPasifMetin)
+                Case Else:      isaret = ChrW(9675):  zemin = Palet(prZemin):       yazi = Palet(prIkincilMetin)
+            End Select
         End If
+        Select Case durum(n)
+            Case KD_OK:       ok = ok + 1
+            Case KD_DIKKAT:   dikkat = dikkat + 1
+            Case KD_ENGEL:    engel = engel + 1
+            Case KD_BEKLIYOR: bekleyen = bekleyen + 1
+        End Select
         With pnl.Cells(KARNE_ILK + n - 1, c)
-            .Value = isaret & "   K" & n & "   " & KontrolAdi(n) & IIf(DahilMi(pnl, k), DurumEki(durum(n)), "")
+            .Value = isaret & "   K" & n & "   " & KontrolAdi(n) & IIf(dahil, DurumEki(durum(n)), "")
             .Interior.Color = zemin
             .Font.Color = yazi
-            .Font.Bold = (durum(n) = KD_DIKKAT Or durum(n) = KD_ENGEL)
-            .Font.Size = 9.5
+            .Font.Bold = (dahil And (durum(n) = KD_DIKKAT Or durum(n) = KD_ENGEL))
+            .Font.Size = YZ_GOVDE
             .IndentLevel = 1
             .Borders(xlEdgeBottom).LineStyle = xlContinuous
             .Borders(xlEdgeBottom).Weight = xlHairline
-            .Borders(xlEdgeBottom).Color = Palet(prAyarKenar)
+            .Borders(xlEdgeBottom).Color = Palet(prCizgi)
         End With
     Next n
+
+    ' --- Baslik rozeti (PN-03): "11 OK . 2 ! . 0 X" (gliflerle) ---
+    With pnl.Cells(KARNE_BASLIK, c)
+        If dahil Then
+            .Value = TR("KONTROL NOKTALARI   ") & ok & " " & ChrW(10003) & "  " & ChrW(183) & "  " & dikkat & " !  " & _
+                     ChrW(183) & "  " & engel & " " & ChrW(10005) & IIf(bekleyen > 0, "  " & ChrW(183) & "  " & bekleyen & " " & ChrW(9675), "")
+            If engel > 0 Then
+                .Interior.Color = Palet(prEngelZemin): .Font.Color = Palet(prEngel)
+            ElseIf dikkat > 0 Or bekleyen > 0 Then
+                .Interior.Color = Palet(prDikkatZemin): .Font.Color = Palet(prDikkat)
+            Else
+                .Interior.Color = Palet(prOkZemin): .Font.Color = Palet(prOk)
+            End If
+        Else
+            .Value = TR("KONTROL NOKTALARI   #-  aktar#ima dahil de#gil")
+            .Interior.Color = Palet(prYuzey): .Font.Color = Palet(prPasifMetin)
+        End If
+        .Font.Bold = True
+        .Font.Size = YZ_GOVDE
+    End With
+
+    ' --- Veri kalitesi skoru (DN-06) ---
+    With pnl.Cells(KARNE_KALITE, c)
+        .IndentLevel = 1
+        .Font.Size = YZ_GOVDE
+        .Font.Bold = True
+        .Interior.Color = Palet(prZemin)
+        If kalite < 0 Or Not dahil Then
+            .Value = TR("Veri kalitesi   #-   (#On Kontrol ile hesaplan#ir)")
+            .Font.Color = Palet(prPasifMetin)
+            .Font.Bold = False
+        Else
+            .Value = TR("Veri kalitesi   ") & Format$(kalite, "0") & " / 100" & _
+                     IIf(kalite >= Esik(ekKaliteHedef), "   " & ChrW(10003), TR("   hedef ") & Format$(Esik(ekKaliteHedef), "0"))
+            .Font.Color = IIf(kalite >= Esik(ekKaliteHedef), Palet(prOk), Palet(prDikkat))
+        End If
+    End With
+
     With pnl.Cells(KARNE_NOT, c)
         .Value = HucreMetni(notMetni)
         .WrapText = True
         .EntireRow.RowHeight = 28
         .Font.Italic = True
-        .Font.Size = 8
+        .Font.Size = YZ_DIPNOT
         .Font.Color = Palet(prIkincilMetin)
         .IndentLevel = 1
     End With
@@ -201,6 +275,14 @@ End Function
 
 
 ' Listeler'de saklanan son karne (Listeler bossa hepsi "-")
+Public Function KarneKalite(ByVal k As Long) As Double
+    Dim x As Variant
+    x = ListeSayfasi(k).Cells(K_SAYI + 2, LST_KARNE).Value
+    KarneKalite = -1
+    If IsNumeric(x) And Not IsEmpty(x) Then KarneKalite = CDbl(x)
+End Function
+
+
 Public Function KarneOku(ByVal k As Long, durum() As String) As String
 
     Dim lst As Worksheet
@@ -258,7 +340,12 @@ Public Sub KarneHafif(ByVal pnl As Worksheet, ByVal k As Long)
         durum(5) = IIf(Val(GuvenliMetin(lst.Cells(LST_DURUM_TIP_UYUSMAZ, LST_DURUM).Value)) > 0, KD_DIKKAT, KD_OK)
     End If
     If AyarMetni(pnl, k, SATIR_TUTAR) = "" Then durum(7) = KD_YOK
-    If AyarMetni(pnl, k, SATIR_HASAR) = "" And AyarMetni(pnl, k, SATIR_IHBAR) = "" Then durum(8) = KD_YOK
+    If AyarMetni(pnl, k, SATIR_HASAR) = "" And AyarMetni(pnl, k, SATIR_IHBAR) = "" Then
+        durum(8) = KD_YOK
+        durum(10) = KD_YOK
+    End If
+    If AyarMetni(pnl, k, SATIR_ANAHTAR) = "" Then durum(9) = KD_YOK
+    If AyarMetni(pnl, k, SATIR_KIRILIM) = "" Then durum(13) = KD_YOK
 
     KarneYaz pnl, k, durum, TR("Canl#i: K1 K4 K5  #*  tam kontrol: 3 #On Kontrol  (") & Format$(Now, "hh:nn") & ")"
 
