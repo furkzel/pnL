@@ -2,6 +2,11 @@
 perf.py - timing of Yenile / On Kontrol / Aktar on large files.
 
   python tools/perf.py [--rows 200000] [--master 300000] [--cols 30] [--panels 3]
+  python tools/perf.py --master 870000 --analiz       # Analiz: 870k rows, <= 1000 groups
+
+v1.1 prints, per step, the wall time and the SURE (ms) the macro wrote to
+Rapor, so K9-K14 / reconciliation cost can be compared with v1.0 runs of the
+same command (run both builds back to back on the same machine).
 
 Builds the data in memory-friendly chunks inside a private Excel instance.
 """
@@ -39,7 +44,8 @@ def main():
     ap.add_argument("--master", type=int, default=300000)
     ap.add_argument("--cols", type=int, default=30)
     ap.add_argument("--panels", type=int, default=3)
-    ap.add_argument("--panel", default=str(xlauto.ROOT / "dist" / "AktarimPaneli_v1.0.xlsm"))
+    ap.add_argument("--panel", default=str(xlauto.ROOT / "dist" / "AktarimPaneli_v1.1.xlsm"))
+    ap.add_argument("--analiz", action="store_true", help="also time Analiz (group by SIRKET, sum TUTAR) on the master")
     a = ap.parse_args()
 
     work = Path(tempfile.mkdtemp(prefix="apb_perf_"))
@@ -104,6 +110,24 @@ def main():
         t0 = time.time()
         s.run(wbP, "GeriAl")
         print(f"GeriAl: {time.time() - t0:.2f}s")
+
+        if a.analiz:
+            an = wbP.Worksheets("Analiz")
+            s.run(wbP, "AnalizAc")
+            an.Range("D5").Value = None
+            an.Range("D6").Value = next(an.Cells(r, 31).Value for r in range(1, 40)
+                                        if "Ana" in str(an.Cells(r, 31).Value or ""))
+            an.Range("D7").Value = "C - SIRKET"
+            an.Range("D9").Value = "Toplam"
+            an.Range("D10").Value = "B - TUTAR"
+            t0 = time.time()
+            s.run(wbP, "AnalizCalistir")
+            print(f"Analiz ({a.master} rows, group SIRKET, sum TUTAR): {time.time() - t0:.2f}s")
+            an.Range("D7").Value = "A - POL NO"       # high cardinality -> sort-based grouping
+            an.Range("D9").Value = "Adet"
+            t0 = time.time()
+            s.run(wbP, "AnalizCalistir")
+            print(f"Analiz high cardinality ({a.master} distinct keys): {time.time() - t0:.2f}s")
         wbP.Close(False)
         src.Close(False)
         mst.Close(False)
