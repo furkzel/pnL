@@ -32,12 +32,14 @@ Private Const DIKEY_ORTA As Long = 3         ' msoAnchorMiddle
 Private Const HIZA_ORTA As Long = 2          ' msoAlignCenter
 Private Const HIZA_SOL As Long = 1           ' msoAlignLeft
 
-' Buton stilleri
-Private Const STIL_ANA As Long = 1
-Private Const STIL_YESIL As Long = 2
-Private Const STIL_KIRMIZI As Long = 3
-Private Const STIL_IKINCIL As Long = 4
-Private Const STIL_KUCUK As Long = 5         ' seyrek ve geri donussuz islem (Set Sil)
+' Buton stilleri (BT-01: birincil / ikincil / ucuncul hiyerarsisi)
+Private Const STIL_ADIM As Long = 1          ' 1-4: durumu AdimlariGuncelle verir
+Private Const STIL_IKINCIL As Long = 2       ' kenarlikli
+Private Const STIL_MENU As Long = 3          ' ucuncul: "Diger" menusu satiri
+Private Const STIL_TEHLIKE As Long = 4       ' Geri Al: kirmizi hayalet
+Private Const STIL_PIL As Long = 5           ' HAZIRLIK
+Private Const STIL_BILDIRIM As Long = 6      ' bildirim seridi
+Private Const SEKIL_DIKDORTGEN As Long = 1   ' msoShapeRectangle
 
 
 ' ============================================================
@@ -266,7 +268,7 @@ Public Sub PanelSatirYukseklikleri(ByVal pnl As Worksheet)
 
     pnl.Rows(1).RowHeight = 6
     pnl.Rows(2).RowHeight = 15
-    pnl.Rows(3).RowHeight = 28
+    pnl.Rows(3).RowHeight = 32
     pnl.Rows(4).RowHeight = 28
     pnl.Rows(5).RowHeight = 8
     pnl.Rows(6).RowHeight = 8
@@ -308,7 +310,7 @@ Public Sub BlokCiz(ByVal pnl As Worksheet, ByVal k As Long)
         .VerticalAlignment = xlCenter
         .IndentLevel = 1
         .Font.Bold = True
-        .Font.Size = 12
+        .Font.Size = YZ_BASLIK
         .Font.Color = Palet(prZemin)
         .Interior.Color = Palet(prBlokBaslik)
     End With
@@ -438,7 +440,7 @@ Private Sub BolumYaz(ByVal pnl As Worksheet, ByVal r As Long, ByVal c As Long, B
     With pnl.Cells(r, c + OFS_ETIKET)
         .Value = metin
         .Font.Bold = True
-        .Font.Size = 8
+        .Font.Size = YZ_DIPNOT
         .Font.Color = Palet(prBolumYazi)
         .VerticalAlignment = xlBottom
     End With
@@ -474,7 +476,7 @@ Public Sub SabitBasligiCiz(ByVal pnl As Worksheet, ByVal k As Long)
     With pnl.Cells(SABIT_NOT, c + OFS_SABIT_SUTUN)
         .Value = TR("Sat#ir#i doldurunca yenisi a#c#il#ir (en fazla 15). S#utunu silince sat#ir kalkar.")
         .Font.Italic = True
-        .Font.Size = 8
+        .Font.Size = YZ_DIPNOT
         .Font.Color = Palet(prIkincilMetin)
     End With
 
@@ -488,10 +490,11 @@ Public Sub TabloBasligiCiz(ByVal pnl As Worksheet, ByVal k As Long)
     c = BlokSutun(k)
     pnl.Cells(BASLIK_SATIR, c + OFS_KAYNAK).Value = TR("KAYNAK S#UTUN  (ayl#ik)")
     pnl.Cells(BASLIK_SATIR, c + OFS_TIP).Value = TR("VER#I T#IP#I")
-    pnl.Cells(BASLIK_SATIR, c + OFS_HEDEF).Value = TR("HEDEF S#UTUN  (ana dosya)")
-    pnl.Cells(BASLIK_SATIR, c + OFS_HARITA).Value = TR("HEDEF HAR#ITASI")
+    ' PN-06: cift tiklanabilen sutunlarin basliginda glif (on ek)
+    pnl.Cells(BASLIK_SATIR, c + OFS_HEDEF).Value = ChrW(10003) & TR("  HEDEF S#UTUN  (ana dosya)")
+    pnl.Cells(BASLIK_SATIR, c + OFS_HARITA).Value = ChrW(8646) & TR("  HEDEF HAR#ITASI")
     pnl.Cells(BASLIK_SATIR, c + OFS_FILTRE).Value = TR("F#ILTRE")
-    pnl.Cells(BASLIK_SATIR, c + OFS_ISLEM).Value = TR("#I#SLEM")
+    pnl.Cells(BASLIK_SATIR, c + OFS_ISLEM).Value = ChrW(8646) & TR("  #I#SLEM")
 
     With pnl.Range(pnl.Cells(BASLIK_SATIR, c), pnl.Cells(BASLIK_SATIR, c + BLOK_GENISLIK - 1))
         .Font.Bold = True
@@ -543,18 +546,26 @@ Public Sub TabloCercevesi(ByVal pnl As Worksheet, ByVal k As Long, ByVal ilk As 
 
     Dim c As Long
 
-    Dim r As Long
+    Dim doluSon As Long
     c = BlokSutun(k)
+    ' TS-06: yalnizca dolu (kaynak sutunu olan) satirlara ince alt cizgi;
+    ' bos satirlarda kenarlik yok. Dolu satirlar ILK_SATIR'dan bitisiktir:
+    ' hucre hucre degil, tek aralik olarak cizilir (v1.0: 502 hucre okumasi).
     pnl.Range(pnl.Cells(ilk, c), pnl.Cells(son, c + BLOK_GENISLIK - 1)).Borders.LineStyle = xlNone
-    For r = ilk To son
-        If Len(GuvenliMetin(pnl.Cells(r, c).Value)) > 0 Then
-            With pnl.Range(pnl.Cells(r, c), pnl.Cells(r, c + BLOK_GENISLIK - 1)).Borders(xlEdgeBottom)
-                .LineStyle = xlContinuous
-                .Weight = xlHairline
-                .Color = Palet(prCizgi)
-            End With
-        End If
-    Next r
+    doluSon = BlokSonSatir(pnl, k)
+    If doluSon > son Then doluSon = son
+    If doluSon >= ilk Then
+        With pnl.Range(pnl.Cells(ilk, c), pnl.Cells(doluSon, c + BLOK_GENISLIK - 1))
+            .Borders(xlEdgeBottom).LineStyle = xlContinuous
+            .Borders(xlEdgeBottom).Weight = xlHairline
+            .Borders(xlEdgeBottom).Color = Palet(prCizgi)
+            If doluSon > ilk Then
+                .Borders(xlInsideHorizontal).LineStyle = xlContinuous
+                .Borders(xlInsideHorizontal).Weight = xlHairline
+                .Borders(xlInsideHorizontal).Color = Palet(prCizgi)
+            End If
+        End With
+    End If
     With pnl.Range(pnl.Cells(SATIR_BLOK_BASLIK, c + BLOK_GENISLIK - 1), _
                    pnl.Cells(SON_SATIR, c + BLOK_GENISLIK - 1)).Borders(xlEdgeRight)
         .LineStyle = xlContinuous
@@ -565,15 +576,20 @@ Public Sub TabloCercevesi(ByVal pnl As Worksheet, ByVal k As Long, ByVal ilk As 
 End Sub
 
 
-' "Bu paneli aktar" hucresinin rengi: Evet yesil, Hayir acik kirmizi
+' "Bu paneli aktar": anahtar glifi (TS-03). Deger "Evet"/"Hayir" olarak
+' KALIR (menu ve kod onu okur); glif yalnizca sayi bicimidir:
+' Evet = "(dolu nokta) Evet" marka rengi, Hayir = "(bos daire) Hayir" soluk.
 Public Sub DahilBoya(ByVal pnl As Worksheet, ByVal k As Long)
     HazirlikGuncelle pnl
     With Ayar(pnl, k, SATIR_DAHIL)
         .Font.Bold = True
+        .Interior.Color = Palet(prDahilEvet)
         If DahilMi(pnl, k) Then
-            .Interior.Color = Palet(prDahilEvet)
+            .NumberFormat = ";;;""" & ChrW(9679) & "  ""@"
+            .Font.Color = Palet(prMarka)
         Else
-            .Interior.Color = Palet(prDahilHayir)
+            .NumberFormat = ";;;""" & ChrW(9675) & "  ""@"
+            .Font.Color = Palet(prPasifMetin)
         End If
     End With
 End Sub
@@ -641,51 +657,89 @@ End Sub
 
 
 Public Sub ButonlariKur(ByVal pnl As Worksheet)
-    Dim i As Long, x As Double, y As Double, shp As Shape
+
+    Dim i As Long
+    Dim x As Double, y As Double, x2 As Double, menuX As Double
+    Dim shp As Shape
     Dim makrolar As Variant, adlar As Variant
+
     On Error Resume Next
     pnl.Buttons.Delete
     On Error GoTo 0
     SekilleriSil pnl
     PanelSatirYukseklikleri pnl
     pnl.Range(pnl.Cells(1, 1), pnl.Cells(SERIT_SON_SATIR, TEMIZLIK_SON_SUTUN)).Interior.Color = Palet(prYuzey)
-    MetinKutusu pnl, "AP_BASLIK", TR("AKTARIM PANEL#I"), SERIT_SOL, pnl.Rows(2).Top, _
-                 SERIT_BUTON_GENISLIK * 2, pnl.Rows(2).Height, 12, Palet(prMetin), True
-    MetinKutusu pnl, GOSTERGE_ADI, "PANEL 1", SERIT_SOL + SERIT_BUTON_GENISLIK * 2, pnl.Rows(2).Top, _
-                 SERIT_BUTON_GENISLIK * 2, pnl.Rows(2).Height, 10, Palet(prIkincilMetin), True
-    makrolar = Array("Yenile", "OtomatikEslestir", "OnKontrol", "Aktar", "DigerMenu", "DenetimOzeti", "GeriAl")
-    adlar = Array(TR("1  Yenile"), TR("2  E#sle#stir"), TR("3  #On Kontrol"), "4  AKTAR", _
-                 TR("Di#ger ") & ChrW(9662), "Denetim", TR("Geri Al"))
-    y = pnl.Rows(3).Top
+    With pnl.Range(pnl.Cells(SERIT_SON_SATIR, 1), pnl.Cells(SERIT_SON_SATIR, TEMIZLIK_SON_SUTUN)).Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .Color = Palet(prCizgi)
+    End With
+
+    ' --- Satir 2: urun adi + aktif panel gostergesi ---
+    MetinKutusu pnl, "AP_BASLIK", TR("AKTARIM PANEL#I  ") & SURUM, SERIT_SOL, pnl.Rows(2).Top, _
+                 SERIT_ADIM_GENISLIK * 2, pnl.Rows(2).Height, YZ_BASLIK, Palet(prMetin), True
+    MetinKutusu pnl, GOSTERGE_ADI, "PANEL 1", SERIT_SOL + SERIT_ADIM_GENISLIK * 2, pnl.Rows(2).Top, _
+                 SERIT_ADIM_GENISLIK * 3, pnl.Rows(2).Height, YZ_GOVDE, Palet(prIkincilMetin), True
+
+    ' --- Satir 3: BIRINCIL (4 adim) | IKINCIL | TEHLIKELI ---
+    y = pnl.Rows(3).Top + (pnl.Rows(3).Height - SERIT_BUTON_YUKSEKLIK) / 2
+    makrolar = Array("Yenile", "OtomatikEslestir", "OnKontrol", "Aktar")
     For i = 0 To UBound(makrolar)
-        x = SERIT_SOL + i * (SERIT_BUTON_GENISLIK + SERIT_BUTON_ARALIK)
-        If i = UBound(makrolar) Then x = x + SERIT_BUTON_ARALIK
-        ButonEkle pnl, CStr(makrolar(i)), CStr(adlar(i)), x, y, SERIT_BUTON_GENISLIK, SERIT_BUTON_YUKSEKLIK, STIL_IKINCIL
-        If CStr(makrolar(i)) = "GeriAl" Then
-            Set shp = pnl.Shapes(ONEK_SEKIL & "BTN_GeriAl")
-            shp.Line.ForeColor.RGB = Palet(prEngel)
-            shp.TextFrame2.TextRange.Font.Fill.ForeColor.RGB = Palet(prEngel)
-        End If
+        x = SERIT_SOL + i * (SERIT_ADIM_GENISLIK + SERIT_BUTON_ARALIK)
+        ButonEkle pnl, CStr(makrolar(i)), AdimAdi(i + 1), x, y, SERIT_ADIM_GENISLIK, SERIT_BUTON_YUKSEKLIK, STIL_ADIM
     Next i
-    MetinKutusu pnl, HAZIRLIK_ADI, TR("Haz#irl#ik"), SERIT_SOL, pnl.Rows(4).Top, _
-                 SERIT_BUTON_GENISLIK * 4, pnl.Rows(4).Height, 9, Palet(prMetin), True
-    pnl.Shapes(HAZIRLIK_ADI).OnAction = "HazirlikGoster"
-    pnl.Shapes(HAZIRLIK_ADI).TextFrame2.WordWrap = -1
-    makrolar = Array("YeniPanelEkle", "PanelKaldir", "PanelOnceki", "PanelSonraki", "SetYukle", "SetKaydet", "SetSil", _
-                     "OneriOnayla", "ProfilKaydet", "AktarSecili", "TutarMutabakatiSon", "Yardim", "Tani")
-    adlar = Array("+ Panel", TR("Panel kald#ir"), TR("#Onceki panel"), "Sonraki panel", TR("Set y#ukle"), "Set kaydet", "Set sil", _
-                 TR("#Oneri onayla"), "Profil kaydet", TR("Se#cili s#utun yamas#i"), TR("Tutar mutabakat#i"), TR("K#ilavuz"), TR("Tan#i"))
+    x2 = SERIT_SOL + SERIT_ADIM_SAYI * (SERIT_ADIM_GENISLIK + SERIT_BUTON_ARALIK) - SERIT_BUTON_ARALIK + SERIT_GRUP_ARALIK
+    y = pnl.Rows(3).Top + (pnl.Rows(3).Height - SERIT_IKINCIL_YUKSEKLIK) / 2
+    makrolar = Array("AnalizAc", "DenetimOzeti", "DigerMenu")
+    adlar = Array("Analiz", "Denetim", TR("Di#ger  ") & ChrW(9662))
     For i = 0 To UBound(makrolar)
-        ButonEkle pnl, CStr(makrolar(i)), CStr(adlar(i)), SERIT_SOL + SERIT_ADIM_SAYI * (SERIT_BUTON_GENISLIK + SERIT_BUTON_ARALIK), _
-                  pnl.Rows(SERIT_SON_SATIR + 1).Top + i * SERIT_MENU_YUKSEKLIK, SERIT_MENU_GENISLIK, SERIT_MENU_YUKSEKLIK, STIL_IKINCIL
+        x = x2 + i * (SERIT_IKINCIL_GENISLIK + SERIT_BUTON_ARALIK)
+        ButonEkle pnl, CStr(makrolar(i)), CStr(adlar(i)), x, y, SERIT_IKINCIL_GENISLIK, SERIT_IKINCIL_YUKSEKLIK, STIL_IKINCIL
+        If CStr(makrolar(i)) = "DigerMenu" Then menuX = x
+    Next i
+    x = x2 + 3 * (SERIT_IKINCIL_GENISLIK + SERIT_BUTON_ARALIK) - SERIT_BUTON_ARALIK + SERIT_GRUP_ARALIK
+    AyracCiz pnl, 1, x - SERIT_GRUP_ARALIK / 2, pnl.Rows(3).Top + 4, pnl.Rows(3).Top + pnl.Rows(3).Height - 4
+    ButonEkle pnl, "GeriAl", ChrW(8630) & TR("  Geri Al"), x, y, SERIT_IKINCIL_GENISLIK, SERIT_IKINCIL_YUKSEKLIK, STIL_TEHLIKE
+
+    ' --- Satir 4: HAZIRLIK pili (adimlarin altinda) + bildirim seridi ---
+    y = pnl.Rows(4).Top + (pnl.Rows(4).Height - SERIT_IKINCIL_YUKSEKLIK) / 2
+    ButonEkle pnl, "HazirlikGoster", TR("HAZIRLIK"), SERIT_SOL, y, _
+              SERIT_ADIM_SAYI * (SERIT_ADIM_GENISLIK + SERIT_BUTON_ARALIK) - SERIT_BUTON_ARALIK, SERIT_IKINCIL_YUKSEKLIK, STIL_PIL
+    pnl.Shapes(ONEK_SEKIL & "BTN_HazirlikGoster").Name = HAZIRLIK_ADI
+    ButonEkle pnl, "BildirimListesi", TR("Bildirim yok"), x2, y, _
+              x + SERIT_IKINCIL_GENISLIK - x2, SERIT_IKINCIL_YUKSEKLIK, STIL_BILDIRIM
+    pnl.Shapes(ONEK_SEKIL & "BTN_BildirimListesi").Name = BILDIRIM_ADI
+
+    ' --- UCUNCUL: "Diger" menusu (gizli; DigerMenu acar/kapatir) ---
+    makrolar = Array("YeniPanelEkle", "PanelKaldir", "PanelOnceki", "PanelSonraki", "SetYukle", "SetKaydet", "SetSil", _
+                     "OneriOnayla", "ProfilKaydet", "AktarSecili", "TutarMutabakatiSon", "AyarlarAc", "Yardim", "Tani")
+    adlar = Array(TR("+  Panel ekle"), TR("#-  Panel kald#ir"), TR("#Onceki panel"), "Sonraki panel", TR("Set y#ukle"), _
+                 "Set kaydet", "Set sil", TR("#Oneri onayla"), "Profil kaydet", TR("Se#cili s#utun yamas#i"), _
+                 TR("Tutar mutabakat#i (son parti)"), TR("Ayarlar ve e#sikler"), TR("K#ilavuz"), TR("Tan#i"))
+    For i = 0 To UBound(makrolar)
+        ButonEkle pnl, CStr(makrolar(i)), CStr(adlar(i)), menuX, _
+                  pnl.Rows(SERIT_SON_SATIR + 1).Top + i * SERIT_MENU_YUKSEKLIK, SERIT_MENU_GENISLIK, SERIT_MENU_YUKSEKLIK, STIL_MENU
         Set shp = pnl.Shapes(ONEK_SEKIL & "BTN_" & CStr(makrolar(i)))
         shp.Name = SERIT_MENU_ONEK & CStr(makrolar(i))
         shp.Visible = False
     Next i
+
     g_SonAktifBlok = 0
     AktifPanelGoster pnl, AktifBlok()
     HazirlikGuncelle pnl
+    BildirimSeridiniYaz
+
 End Sub
+
+
+Private Function AdimAdi(ByVal n As Long) As String
+    Select Case n
+        Case 1: AdimAdi = TR("1   Yenile")
+        Case 2: AdimAdi = TR("2   E#sle#stir")
+        Case 3: AdimAdi = TR("3   #On Kontrol")
+        Case Else: AdimAdi = "4   AKTAR"
+    End Select
+End Function
+
 
 Public Sub DigerMenu()
     Dim pnl As Worksheet, shp As Shape, ac As Boolean
@@ -703,9 +757,25 @@ Cikis:
     EkranAc
 End Sub
 
+
+Public Sub AyarlarAc()
+    On Error Resume Next
+    If Not SayfaVarMi(SAYFA_AYARLAR) Then AyarlarSayfasiHazirla
+    ThisWorkbook.Worksheets(SAYFA_AYARLAR).Activate
+    ActiveWindow.ScrollRow = 1
+    On Error GoTo 0
+End Sub
+
+
+' BT-02/03: adim durumu. Tamamlanan "isaretli", SIRADAKI dolgulu (marka),
+' sonrakiler pasif. ENGEL varken AKTAR pasif gorunur (tiklanirsa engeli
+' anlatir; kontrol atlanmaz).
 Public Sub AdimlariGuncelle(ByVal pnl As Worksheet, ByVal engelli As Boolean, ByVal bekliyor As Boolean)
-    Dim makrolar As Variant, adlar As Variant, shp As Shape
+
+    Dim shp As Shape
     Dim i As Long, sonraki As Long, k As Long, c As Long, r As Long, eslesen As Long
+    Dim makrolar As Variant
+
     k = AktifBlok(): c = BlokSutun(k)
     sonraki = 1
     If Len(GuvenliMetin(pnl.Cells(ILK_SATIR, c + OFS_KAYNAK).Value)) > 0 Then
@@ -716,25 +786,35 @@ Public Sub AdimlariGuncelle(ByVal pnl As Worksheet, ByVal engelli As Boolean, By
         If eslesen > 0 Then sonraki = 3
         If Not engelli And Not bekliyor And eslesen > 0 Then sonraki = 4
     End If
+
     makrolar = Array("Yenile", "OtomatikEslestir", "OnKontrol", "Aktar")
-    adlar = Array(TR("1  Yenile"), TR("2  E#sle#stir"), TR("3  #On Kontrol"), "4  AKTAR")
     For i = 0 To UBound(makrolar)
         Set shp = pnl.Shapes(ONEK_SEKIL & "BTN_" & CStr(makrolar(i)))
-        shp.Fill.ForeColor.RGB = Palet(prZemin)
-        shp.TextFrame2.TextRange.Font.Fill.ForeColor.RGB = Palet(prIkincilMetin)
-        shp.TextFrame2.TextRange.Text = CStr(adlar(i))
+        shp.AlternativeText = ""
         If i + 1 = sonraki Then
-            shp.Fill.ForeColor.RGB = Palet(prMarka)
-            shp.TextFrame2.TextRange.Font.Fill.ForeColor.RGB = Palet(prZemin)
-        End If
-        If i + 1 < sonraki Then shp.TextFrame2.TextRange.Text = ChrW(10003) & " " & CStr(adlar(i))
-        If i = 3 And (engelli Or bekliyor) Then
-            shp.Fill.ForeColor.RGB = Palet(prYuzey)
-            shp.AlternativeText = TR("Aktar#im i#cin #once eksikleri giderip #On Kontrol #cal#i#st#ir#in.")
+            AdimBoya shp, Palet(prMarka), Palet(prMarka), Palet(prZemin), AdimAdi(i + 1)
+        ElseIf i + 1 < sonraki Then
+            AdimBoya shp, Palet(prZemin), Palet(prCerceve), Palet(prIkincilMetin), ChrW(10003) & "  " & AdimAdi(i + 1)
         Else
-            shp.AlternativeText = ""
+            AdimBoya shp, Palet(prZemin), Palet(prCizgi), Palet(prPasifMetin), AdimAdi(i + 1)
+        End If
+        If i = 3 And engelli Then
+            AdimBoya shp, Palet(prYuzey), Palet(prCizgi), Palet(prPasifMetin), AdimAdi(4) & "   " & ChrW(10005)
+            shp.AlternativeText = TR("ENGEL var: aktar#im yap#ilamaz. Karnedeki k#irm#iz#i maddeyi giderip #On Kontrol'#u " & _
+                                     "yeniden #cal#i#st#ir#in.")
         End If
     Next i
+
+End Sub
+
+
+Private Sub AdimBoya(ByVal shp As Shape, ByVal zemin As Long, ByVal kenar As Long, ByVal yazi As Long, ByVal metin As String)
+    shp.Fill.ForeColor.RGB = zemin
+    shp.Line.Visible = -1
+    shp.Line.ForeColor.RGB = kenar
+    shp.Line.Weight = 0.75
+    shp.TextFrame2.TextRange.Text = metin
+    shp.TextFrame2.TextRange.Font.Fill.ForeColor.RGB = yazi
 End Sub
 
 
@@ -757,38 +837,46 @@ Private Sub ButonEkle(ByVal pnl As Worksheet, ByVal makro As String, ByVal yazi 
                       ByVal stil As Long)
 
     Dim shp As Shape
-    Dim zemin As Long, yaziRenk As Long, kenar As Long
+    Dim zemin As Long, yaziRenk As Long, kenar As Long, boyut As Double, hiza As Long
+    Dim kenarVar As Boolean, kalin As Boolean
 
+    kenarVar = True
+    kalin = True
+    hiza = HIZA_ORTA
     Select Case stil
-        Case STIL_ANA:     zemin = Palet(prButonAna)
-        Case STIL_YESIL:   zemin = Palet(prButonYesil)
-        Case STIL_KIRMIZI: zemin = Palet(prButonKirmizi)
-        Case STIL_KUCUK:   zemin = Palet(prSeritZemin)
-        Case Else:         zemin = Palet(prZemin)
+        Case STIL_ADIM
+            zemin = Palet(prZemin): kenar = Palet(prCizgi): yaziRenk = Palet(prPasifMetin): boyut = YZ_BOLUM
+        Case STIL_TEHLIKE
+            zemin = Palet(prZemin): kenar = Palet(prEngel): yaziRenk = Palet(prEngel): boyut = YZ_GOVDE
+        Case STIL_PIL
+            zemin = Palet(prYuzey): kenar = Palet(prCizgi): yaziRenk = Palet(prMetin): boyut = YZ_GOVDE
+            hiza = HIZA_SOL
+        Case STIL_BILDIRIM
+            zemin = Palet(prZemin): kenar = Palet(prCizgi): yaziRenk = Palet(prIkincilMetin): boyut = YZ_DIPNOT
+            hiza = HIZA_SOL
+            kalin = False
+        Case STIL_MENU
+            zemin = Palet(prZemin): kenar = Palet(prCizgi): yaziRenk = Palet(prMetin): boyut = YZ_GOVDE
+            hiza = HIZA_SOL
+            kalin = False
+        Case Else
+            zemin = Palet(prZemin): kenar = Palet(prCerceve): yaziRenk = Palet(prMetin): boyut = YZ_GOVDE
     End Select
-    yaziRenk = Palet(prZemin)
-    If stil = STIL_IKINCIL Then yaziRenk = Palet(prIkincilMetin)
-    If stil = STIL_KUCUK Then yaziRenk = Palet(prSeritGrupYazi)
-    kenar = Palet(prButonKenar)
 
-    Set shp = pnl.Shapes.AddShape(SEKIL_YUVARLAK, sol, ust, g, y)
+    Set shp = pnl.Shapes.AddShape(IIf(stil = STIL_MENU, SEKIL_DIKDORTGEN, SEKIL_YUVARLAK), sol, ust, g, y)
     shp.Name = ONEK_SEKIL & "BTN_" & makro
     shp.OnAction = makro
     On Error Resume Next
-    shp.Adjustments.Item(1) = 0.22
+    shp.Adjustments.Item(1) = 0.18
     shp.Shadow.Visible = 0
     On Error GoTo 0
     shp.Fill.ForeColor.RGB = zemin
-    If stil = STIL_IKINCIL Or stil = STIL_KUCUK Then
-        shp.Line.Visible = -1
-        shp.Line.ForeColor.RGB = kenar
-        shp.Line.Weight = 0.75
-    Else
-        shp.Line.Visible = 0
-    End If
+    shp.Line.Visible = IIf(kenarVar, -1, 0)
+    shp.Line.ForeColor.RGB = kenar
+    shp.Line.Weight = 0.75
 
     With shp.TextFrame2
-        .MarginLeft = 3
+        .MarginLeft = IIf(hiza = HIZA_SOL, 8, 3)
         .MarginRight = 3
         .MarginTop = 0
         .MarginBottom = 0
@@ -796,14 +884,10 @@ Private Sub ButonEkle(ByVal pnl As Worksheet, ByVal makro As String, ByVal yazi 
         .VerticalAnchor = DIKEY_ORTA
         .TextRange.Text = yazi
         .TextRange.Font.Name = PANEL_YAZI_TIPI
-        Select Case stil
-            Case STIL_IKINCIL: .TextRange.Font.Size = 9
-            Case STIL_KUCUK:   .TextRange.Font.Size = 8
-            Case Else:         .TextRange.Font.Size = 10      ' 1-2-3-4 ana adimlar
-        End Select
-        .TextRange.Font.Bold = -1
+        .TextRange.Font.Size = boyut
+        .TextRange.Font.Bold = IIf(kalin, -1, 0)
         .TextRange.Font.Fill.ForeColor.RGB = yaziRenk
-        .TextRange.ParagraphFormat.Alignment = HIZA_ORTA
+        .TextRange.ParagraphFormat.Alignment = hiza
     End With
     shp.Placement = xlFreeFloating
 
@@ -812,7 +896,7 @@ End Sub
 
 Private Sub MetinKutusu(ByVal pnl As Worksheet, ByVal ad As String, ByVal metin As String, _
                         ByVal sol As Double, ByVal ust As Double, ByVal g As Double, ByVal y As Double, _
-                        ByVal boyut As Long, ByVal renk As Long, ByVal kalin As Boolean)
+                        ByVal boyut As Double, ByVal renk As Long, ByVal kalin As Boolean)
 
     Dim shp As Shape
 
@@ -841,7 +925,7 @@ End Sub
 
 Private Sub GrupEtiketi(ByVal pnl As Worksheet, ByVal n As Long, ByVal metin As String, _
                         ByVal sol As Double, ByVal ust As Double)
-    MetinKutusu pnl, ONEK_SEKIL & "GRUP_" & n, metin, sol, ust, 300, 14, 8, Palet(prSeritGrupYazi), True
+    MetinKutusu pnl, ONEK_SEKIL & "GRUP_" & n, metin, sol, ust, 300, 14, YZ_DIPNOT, Palet(prSeritGrupYazi), True
 End Sub
 
 
@@ -852,7 +936,7 @@ Private Sub AyracCiz(ByVal pnl As Worksheet, ByVal n As Long, ByVal x As Double,
 
     Set shp = pnl.Shapes.AddLine(x, ust + 2, x, alt)
     shp.Name = ONEK_SEKIL & "AYRAC_" & n
-    shp.Line.ForeColor.RGB = Palet(prButonIkincil)
+    shp.Line.ForeColor.RGB = Palet(prCizgi)
     shp.Line.Weight = 1
     shp.Placement = xlFreeFloating
 

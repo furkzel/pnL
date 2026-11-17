@@ -33,6 +33,19 @@ class SourceGates(unittest.TestCase):
     def test_forbidden_transpose(self):
         self.assertTrue(any('Transpose' in x for x in self.gate('Option Explicit\nx = Application.Transpose(a)')))
 
+    def test_font_size_literal(self):
+        self.assertTrue(any('font size' in x for x in self.gate('Option Explicit\nx.Font.Size = 9')))
+        self.assertEqual(self.gate('Option Explicit\nPublic Sub T()\nx.Font.Size = YZ_GOVDE\nEnd Sub'), [])
+
+    def test_alias_contrast_resolved(self):
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder)
+            text = (SRC / 'M01_Ayarlar.bas').read_text()
+            # A role alias pointing to a pale token must fail where it is used as text.
+            text = text.replace('Case prTipUyusmazYazi: Palet = Palet(prEngel)', 'Case prTipUyusmazYazi: Palet = Palet(prCizgi)')
+            (target / 'M01_Ayarlar.bas').write_text(text)
+            self.assertTrue(any('prTipUyusmazYazi/' in x for x in check_contrast(target)))
+
     def test_continuations(self):
         self.assertTrue(any('24' in x for x in self.gate('Option Explicit\n' + 'x = x + _\n' * 25)))
 

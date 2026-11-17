@@ -417,10 +417,16 @@ Public Const ST_KIRILIM As Long = 14          ' v1.1
 Public Const ST_DONEM As Long = 15            ' v1.1
 Public Const ST_SON As Long = 15
 
+' Serit geometrisi (point). Birincil = 4 adim (yalniz SIRADAKI dolgulu),
+' ikincil = kenarlikli (Analiz, Denetim, Diger), ucuncul = "Diger" menusu,
+' tehlikeli = Geri Al (kirmizi hayalet, ayri grupta, en sagda).
 Public Const SERIT_SOL As Double = 10
-Public Const SERIT_BUTON_GENISLIK As Double = 124
+Public Const SERIT_ADIM_GENISLIK As Double = 112
 Public Const SERIT_BUTON_YUKSEKLIK As Double = 26
-Public Const SERIT_BUTON_ARALIK As Double = 8
+Public Const SERIT_IKINCIL_GENISLIK As Double = 84
+Public Const SERIT_IKINCIL_YUKSEKLIK As Double = 22
+Public Const SERIT_BUTON_ARALIK As Double = 6
+Public Const SERIT_GRUP_ARALIK As Double = 18
 Public Const SERIT_MENU_GENISLIK As Double = 190
 Public Const SERIT_MENU_YUKSEKLIK As Double = 22
 Public Const SERIT_MENU_ONEK As String = "AP_MENU_"
@@ -528,50 +534,27 @@ Public g_HesapDurdu As Boolean
 
 
 ' ============================================================
-'  RENK PALETI  (tek yerden degistirilir)
+'  RENK PALETI  (TEK KAYNAK; baska modulde RGB yok - build kapisi denetler)
+'
+'  Anlam katmani: 6 notr + 1 marka + 3 durum + 1 oneri. Zemin rengi
+'  yalnizca DURUM icin kullanilir, bolge icin kullanilmaz.
+'    YESIL  = yalnizca OK       AMBER = DIKKAT     KIRMIZI = ENGEL
+'    MOR    = oneri (onay bekliyor)                MAVI    = marka / siradaki adim
+'  Her metin/zemin cifti >= 4.5:1 (WCAG AA; tools/source_checks.py).
+'  Asagidaki rol adlari (prSerit..., prDurum...) tokenlara takma addir.
 ' ============================================================
 Public Function Palet(ByVal renk As PaletRenk) As Long
 
     Select Case renk
-        Case prSeritZemin:      Palet = RGB(15, 23, 42)
-        Case prSeritYazi:       Palet = RGB(255, 255, 255)
-        Case prSeritGrupYazi:   Palet = RGB(71, 85, 105)
-        Case prButonAna:        Palet = RGB(29, 78, 216)
-        Case prButonYesil:      Palet = RGB(21, 128, 61)
-        Case prButonKirmizi:    Palet = RGB(185, 28, 28)
-        Case prButonIkincil:    Palet = RGB(71, 85, 105)
-        Case prButonKenar:      Palet = RGB(71, 85, 105)
-        Case prBlokBaslik:      Palet = RGB(71, 85, 105)
-        Case prBlokBaslikAktif: Palet = RGB(29, 78, 216)
-        Case prBolumYazi:       Palet = RGB(29, 78, 216)
-        Case prEtiketYazi:      Palet = RGB(71, 85, 105)
-        Case prAyarZemin:       Palet = RGB(255, 255, 255)
-        Case prAyarKenar:       Palet = RGB(226, 232, 240)
-        Case prDahilEvet:       Palet = RGB(248, 250, 252)
-        Case prDahilHayir:      Palet = RGB(248, 250, 252)
-        Case prSabitBaslik:     Palet = RGB(248, 250, 252)
-        Case prSabitDolu:       Palet = RGB(255, 255, 255)
-        Case prSabitBosSatir:   Palet = RGB(255, 255, 255)
-        Case prSabitEksik:      Palet = RGB(254, 226, 226)
-        Case prDurumNotr:       Palet = RGB(248, 250, 252)
-        Case prDurumHazir:      Palet = RGB(220, 252, 231)
-        Case prDurumUyari:      Palet = RGB(254, 243, 199)
-        Case prDurumHata:       Palet = RGB(254, 226, 226)
-        Case prDurumOneri:      Palet = RGB(237, 233, 254)
-        Case prTabloBaslik:     Palet = RGB(226, 232, 240)
-        Case prKaynakZemin:     Palet = RGB(248, 250, 252)
-        Case prHedefZemin:      Palet = RGB(255, 255, 255)
-        Case prFiltreZemin:     Palet = RGB(255, 255, 255)
-        Case prIslemZemin:      Palet = RGB(255, 255, 255)
-        Case prOneri:           Palet = RGB(237, 233, 254)
-        Case prTipUyusmaz:      Palet = RGB(254, 226, 226)
-        Case prTipUyusmazYazi:  Palet = RGB(185, 28, 28)
-        Case prCerceve:         Palet = RGB(71, 85, 105)
+        ' --- tokenlar ---
         Case prZemin: Palet = RGB(255, 255, 255)
         Case prYuzey: Palet = RGB(248, 250, 252)
+        Case prTabloBaslik: Palet = RGB(241, 245, 249)
         Case prCizgi: Palet = RGB(226, 232, 240)
+        Case prCerceve: Palet = RGB(203, 213, 225)
         Case prMetin: Palet = RGB(15, 23, 42)
         Case prIkincilMetin: Palet = RGB(71, 85, 105)
+        Case prPasifMetin: Palet = RGB(100, 116, 139)
         Case prMarka: Palet = RGB(29, 78, 216)
         Case prMarkaZemin: Palet = RGB(219, 234, 254)
         Case prOk: Palet = RGB(21, 128, 61)
@@ -582,8 +565,40 @@ Public Function Palet(ByVal renk As PaletRenk) As Long
         Case prEngelZemin: Palet = RGB(254, 226, 226)
         Case prOneriMetin: Palet = RGB(109, 40, 217)
         Case prOneriZemin: Palet = RGB(237, 233, 254)
-        Case prPasifMetin: Palet = RGB(100, 116, 139)
-        Case Else:              Palet = RGB(255, 255, 255)
+        ' --- rol takma adlari ---
+        Case prSeritZemin: Palet = Palet(prYuzey)
+        Case prSeritYazi: Palet = Palet(prMetin)
+        Case prSeritGrupYazi: Palet = Palet(prIkincilMetin)
+        Case prButonAna: Palet = Palet(prMarka)
+        Case prButonYesil: Palet = Palet(prOk)
+        Case prButonKirmizi: Palet = Palet(prEngel)
+        Case prButonIkincil: Palet = Palet(prIkincilMetin)
+        Case prButonKenar: Palet = Palet(prCerceve)
+        Case prBlokBaslik: Palet = Palet(prMetin)
+        Case prBlokBaslikAktif: Palet = Palet(prMarka)
+        Case prBolumYazi: Palet = Palet(prMarka)
+        Case prEtiketYazi: Palet = Palet(prIkincilMetin)
+        Case prAyarZemin: Palet = Palet(prZemin)
+        Case prAyarKenar: Palet = Palet(prCizgi)
+        Case prDahilEvet: Palet = Palet(prZemin)
+        Case prDahilHayir: Palet = Palet(prZemin)
+        Case prSabitBaslik: Palet = Palet(prTabloBaslik)
+        Case prSabitDolu: Palet = Palet(prZemin)
+        Case prSabitBosSatir: Palet = Palet(prYuzey)
+        Case prSabitEksik: Palet = Palet(prEngelZemin)
+        Case prDurumNotr: Palet = Palet(prYuzey)
+        Case prDurumHazir: Palet = Palet(prOkZemin)
+        Case prDurumUyari: Palet = Palet(prDikkatZemin)
+        Case prDurumHata: Palet = Palet(prEngelZemin)
+        Case prDurumOneri: Palet = Palet(prOneriZemin)
+        Case prKaynakZemin: Palet = Palet(prYuzey)
+        Case prHedefZemin: Palet = Palet(prZemin)
+        Case prFiltreZemin: Palet = Palet(prZemin)
+        Case prIslemZemin: Palet = Palet(prZemin)
+        Case prOneri: Palet = Palet(prOneriZemin)
+        Case prTipUyusmaz: Palet = Palet(prEngelZemin)
+        Case prTipUyusmazYazi: Palet = Palet(prEngel)
+        Case Else: Palet = RGB(255, 255, 255)
     End Select
 
 End Function

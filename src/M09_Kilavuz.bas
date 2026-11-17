@@ -63,7 +63,7 @@ Public Sub KilavuzKur()
     ws.Rows.Hidden = False
     ws.Cells.RowHeight = 15
     ws.Cells.Font.Name = PANEL_YAZI_TIPI
-    ws.Cells.Font.Size = 10
+    ws.Cells.Font.Size = YZ_GOVDE
     ws.Columns(1).ColumnWidth = 2
     ws.Columns(2).ColumnWidth = 4
     ws.Columns(K_METIN).ColumnWidth = 125
@@ -130,7 +130,7 @@ Private Sub KBaslikAlani(ByVal ws As Worksheet)
 
     With ws.Cells(2, K_METIN)
         .Value = TR("AKTARIM PANEL#I  #-  KULLANIM KILAVUZU")
-        .Font.Size = 20
+        .Font.Size = YZ_BASLIK
         .Font.Bold = True
         .Font.Color = Palet(prMarka)
     End With
@@ -174,7 +174,7 @@ Private Sub KButon(ByVal ws As Worksheet, ByVal metin As String, ByVal makro As 
     With shp.TextFrame2
         .TextRange.Text = metin
         .TextRange.Font.Name = PANEL_YAZI_TIPI
-        .TextRange.Font.Size = 10
+        .TextRange.Font.Size = YZ_GOVDE
         .TextRange.Font.Bold = -1
         .TextRange.Font.Fill.ForeColor.RGB = Palet(prMarka)
         .TextRange.ParagraphFormat.Alignment = 2
@@ -205,7 +205,7 @@ Private Sub KBolum(ByVal no As Long, ByVal baslik As String)
         .Interior.Color = Palet(prMetin)
         .Font.Color = Palet(prZemin)
         .Font.Bold = True
-        .Font.Size = 12
+        .Font.Size = YZ_BASLIK
         .VerticalAlignment = xlCenter
     End With
     g_KWs.Cells(g_KSatir, K_METIN).Value = HucreMetni(no & ".  " & TR(baslik))
@@ -236,7 +236,7 @@ Private Sub KSatir(ByVal tur As String, ByVal metin As String)
         Case "A"
             h.Value = HucreMetni(metin)
             h.Font.Bold = True
-            h.Font.Size = 11
+            h.Font.Size = YZ_BOLUM
             h.Font.Color = Palet(prMarka)
         Case "M"
             h.Value = HucreMetni(ChrW(8226) & "  " & metin)
@@ -331,7 +331,7 @@ Private Sub KBaslikSekli(ByVal ws As Worksheet, ByVal n As Long, ByVal satir As 
     With shp.TextFrame2
         .TextRange.Text = ChrW(9654) & "    " & GuvenliMetin(ws.Cells(satir, K_METIN).Value)
         .TextRange.Font.Name = PANEL_YAZI_TIPI
-        .TextRange.Font.Size = 12
+        .TextRange.Font.Size = YZ_BASLIK
         .TextRange.Font.Bold = -1
         .TextRange.Font.Fill.ForeColor.RGB = Palet(prZemin)
         .TextRange.ParagraphFormat.Alignment = 1
@@ -922,7 +922,7 @@ Public Sub GelistiriciGuncelle()
     ws.Columns(1).ColumnWidth = 150
     ws.Columns(1).NumberFormat = "@"
     ws.Columns(1).Font.Name = "Consolas"
-    ws.Columns(1).Font.Size = 10
+    ws.Columns(1).Font.Size = YZ_GOVDE
 
     ReDim dizi(1 To g_GSay, 1 To 1)
     For i = 1 To g_GSay

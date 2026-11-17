@@ -173,3 +173,4 @@ vbempty
 vbnull
 vberror
 eof
+xlinsidehorizontal

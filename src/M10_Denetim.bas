@@ -385,38 +385,37 @@ Public Sub HazirlikGuncelle(ByVal pnl As Worksheet)
         End If
     Next k
 
+    ' BT-07: tek satir, durum zemini + ayni anlamda koyu metin
     If dahil = 0 Then
-        metin = TR("Aktar#ima dahil panel yok") & vbLf & TR("Bu paneli aktar = Evet")
-        renk = Palet(prButonIkincil)
+        metin = TR("HAZIRLIK   aktar#ima dahil panel yok  #*  'Bu paneli aktar' = Evet")
     Else
-        metin = dahil & TR(" panel dahil  #*  ") & (hazir + dikkat) & TR(" haz#ir") & vbLf
-        If engel > 0 Then metin = metin & engel & " ENGEL  "
-        If bekleyen > 0 Then metin = metin & bekleyen & TR(" kontrol bekliyor  ")
-        If dikkat > 0 Then metin = metin & dikkat & TR(" d#ikkatli")
-        If engel = 0 And bekleyen = 0 And dikkat = 0 Then metin = metin & TR("4 AKTAR'a haz#ir")
-        If engel > 0 Then
-            renk = Palet(prButonKirmizi)
-        ElseIf bekleyen > 0 Or dikkat > 0 Then
-            renk = Palet(prDikkat)
-        Else
-            renk = Palet(prButonYesil)
-        End If
+        metin = TR("HAZIRLIK   ") & (hazir + dikkat) & " / " & dahil & TR(" panel haz#ir")
+        If dikkat > 0 Then metin = metin & "   " & ChrW(183) & "   " & dikkat & TR(" d#ikkatli (!)")
+        If bekleyen > 0 Then metin = metin & "   " & ChrW(183) & "   " & bekleyen & TR(" #On Kontrol bekliyor")
+        If engel > 0 Then metin = metin & "   " & ChrW(183) & "   " & engel & " ENGEL (" & ChrW(10005) & ")"
+        If engel = 0 And bekleyen = 0 Then metin = metin & "   " & ChrW(183) & TR("   4 AKTAR'a haz#ir")
     End If
 
     On Error Resume Next
     AdimlariGuncelle pnl, (engel > 0 Or dahil = 0), (bekleyen > 0)
     shp.TextFrame2.TextRange.Text = metin
-    shp.TextFrame2.TextRange.Font.Fill.ForeColor.RGB = Palet(prMetin)
     If engel > 0 Then
-        renk = Palet(prEngelZemin)
+        shp.Fill.ForeColor.RGB = Palet(prEngelZemin)
+        shp.Line.ForeColor.RGB = Palet(prEngel)
+        shp.TextFrame2.TextRange.Font.Fill.ForeColor.RGB = Palet(prEngel)
     ElseIf bekleyen > 0 Or dikkat > 0 Then
-        renk = Palet(prDikkatZemin)
+        shp.Fill.ForeColor.RGB = Palet(prDikkatZemin)
+        shp.Line.ForeColor.RGB = Palet(prDikkat)
+        shp.TextFrame2.TextRange.Font.Fill.ForeColor.RGB = Palet(prDikkat)
     ElseIf dahil > 0 Then
-        renk = Palet(prOkZemin)
+        shp.Fill.ForeColor.RGB = Palet(prOkZemin)
+        shp.Line.ForeColor.RGB = Palet(prOk)
+        shp.TextFrame2.TextRange.Font.Fill.ForeColor.RGB = Palet(prOk)
     Else
-        renk = Palet(prYuzey)
+        shp.Fill.ForeColor.RGB = Palet(prYuzey)
+        shp.Line.ForeColor.RGB = Palet(prCizgi)
+        shp.TextFrame2.TextRange.Font.Fill.ForeColor.RGB = Palet(prIkincilMetin)
     End If
-    shp.Fill.ForeColor.RGB = renk
     On Error GoTo 0
 
 End Sub
@@ -615,7 +614,7 @@ Private Sub DenetimYaz()
     On Error GoTo 0
     ws.UsedRange.Clear
     ws.Cells.Font.Name = PANEL_YAZI_TIPI
-    ws.Cells.Font.Size = 10
+    ws.Cells.Font.Size = YZ_GOVDE
     ws.Columns(1).ColumnWidth = 2
     ws.Range(ws.Columns(2), ws.Columns(13)).ColumnWidth = 14
     ws.Columns(3).ColumnWidth = 26
@@ -623,7 +622,7 @@ Private Sub DenetimYaz()
 
     With ws.Cells(2, 2)
         .Value = TR("DENET#IM #OZET#I  #-  Aktar#im Paneli ") & SURUM
-        .Font.Size = 18
+        .Font.Size = YZ_BASLIK
         .Font.Bold = True
         .Font.Color = Palet(prMarka)
     End With
@@ -723,7 +722,7 @@ Private Sub KpiKart(ByVal ws As Worksheet, ByVal r As Long, ByVal c As Long, ByV
     With ws.Range(ws.Cells(r, c), ws.Cells(r, c + 1))
         .Merge
         .Value = baslik
-        .Font.Size = 9
+        .Font.Size = YZ_DIPNOT
         .Font.Bold = True
         .Font.Color = Palet(prIkincilMetin)
         .IndentLevel = 1
@@ -732,7 +731,7 @@ Private Sub KpiKart(ByVal ws As Worksheet, ByVal r As Long, ByVal c As Long, ByV
         .Merge
         .Value2 = deger
         .NumberFormat = "#,##0"
-        .Font.Size = 16
+        .Font.Size = YZ_GOSTERGE
         .Font.Bold = True
         .Font.Color = Palet(prMetin)
         .IndentLevel = 1
@@ -741,7 +740,7 @@ Private Sub KpiKart(ByVal ws As Worksheet, ByVal r As Long, ByVal c As Long, ByV
     With ws.Range(ws.Cells(r + 2, c), ws.Cells(r + 2, c + 1))
         .Merge
         .Value = HucreMetni(alt)
-        .Font.Size = 8
+        .Font.Size = YZ_DIPNOT
         .Font.Color = Palet(prIkincilMetin)
         .IndentLevel = 1
     End With
@@ -789,7 +788,7 @@ Private Sub DenetimTrend(ByVal ws As Worksheet, ByVal ilkAy As Date, satir() As 
         .HasTitle = True
         .ChartTitle.Text = TR("Son 12 ay #* etkin aktar#imlar")
         .ChartArea.Font.Name = PANEL_YAZI_TIPI
-        .ChartArea.Font.Size = 9
+        .ChartArea.Font.Size = YZ_DIPNOT
         .PlotVisibleOnly = False
         .Legend.Position = xlLegendPositionBottom
     End With

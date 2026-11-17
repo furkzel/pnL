@@ -597,8 +597,8 @@ Public Sub BlokMenuleriTazele(ByVal pnl As Worksheet, ByVal k As Long)
     hedefSon = lst.Cells(lst.Rows.Count, LST_HEDEF_SUTUNLAR).End(xlUp).Row
     If son < ILK_SATIR Or Trim$(GuvenliMetin(lst.Cells(1, LST_HEDEF_SUTUNLAR).Value)) = "" Then
         TipSutunuYaz pnl, k, Nothing
-        DurumYaz pnl, k
         KarneHafif pnl, k
+        DurumYaz pnl, k
         Exit Sub
     End If
 
@@ -638,8 +638,8 @@ Public Sub BlokMenuleriTazele(ByVal pnl As Worksheet, ByVal k As Long)
     End If
 
     TipSutunuYaz pnl, k, hedefWs
-    DurumYaz pnl, k
     KarneHafif pnl, k
+    DurumYaz pnl, k
 
 End Sub
 
@@ -673,13 +673,16 @@ Public Function DurumYaz(ByVal pnl As Worksheet, ByVal k As Long) As String
     yesilBos = Val(GuvenliMetin(lst.Cells(LST_DURUM_YESIL_BOS, LST_DURUM).Value))
     tipUyusmaz = Val(GuvenliMetin(lst.Cells(LST_DURUM_TIP_UYUSMAZ, LST_DURUM).Value))
 
+    ' PN-01: DURUM rengi metinle ayni anlamda. HAZIR = OK, EKSIK ve
+    ' KONTROL GEREKIYOR = DIKKAT, oneri = mor, PASIF = notr. Kirmizi
+    ' yalnizca karnede ENGEL varsa (asagida).
     renk = Palet(prDurumNotr)
     If kaynakSay = 0 Then
         metin = "EKSIK: kaynak dosya/sayfa secilmemis"
-        renk = Palet(prDurumHata)
+        renk = Palet(prDurumUyari)
     ElseIf Trim$(GuvenliMetin(lst.Cells(1, LST_HEDEF_SUTUNLAR).Value)) = "" Then
         metin = "EKSIK: hedef dosya/sayfa secilmemis"
-        renk = Palet(prDurumHata)
+        renk = Palet(prDurumUyari)
     ElseIf eslesen = 0 Then
         metin = "EKSIK: hic sutun eslestirilmemis"
         renk = Palet(prDurumUyari)
@@ -697,24 +700,34 @@ Public Function DurumYaz(ByVal pnl As Worksheet, ByVal k As Long) As String
         End If
         If yesilToplam > 0 Then
             metin = metin & "  |  YESIL: " & yesilToplam & " sutun, " & yesilBos & " tanesi BOSTA"
-            If yesilBos > 0 Then renk = Palet(prDurumHata)
+            If yesilBos > 0 Then renk = Palet(prDurumUyari)
         End If
         If tipUyusmaz > 0 Then
             metin = metin & "  |  VERI TIPI UYUSMAZ: " & tipUyusmaz & " sutun"
-            renk = Palet(prDurumHata)
+            renk = Palet(prDurumUyari)
         End If
     End If
 
     If Not DahilMi(pnl, k) Then
         metin = "PASIF: aktarima dahil degil"
         renk = Palet(prDurumNotr)
-    ElseIf renk = Palet(prDurumHata) And Left$(metin, 5) = "HAZIR" Then
+    ElseIf renk = Palet(prDurumUyari) And Left$(metin, 5) = "HAZIR" Then
         metin = "KONTROL GEREKIYOR" & Mid$(metin, 6)
+    ElseIf HazirlikDurumu(k) = KD_ENGEL And kaynakSay > 0 Then
+        metin = "ENGEL " & HazirlikEtiketi(k) & "  |  " & metin
+        renk = Palet(prDurumHata)
     End If
     If notlar <> "" Then metin = metin & "  |  " & notlar
 
     pnl.Cells(SATIR_DURUM, c).Value = HucreMetni("DURUM: " & metin)
     pnl.Cells(SATIR_DURUM, c).Interior.Color = renk
+    Select Case renk
+        Case Palet(prDurumHazir): pnl.Cells(SATIR_DURUM, c).Font.Color = Palet(prOk)
+        Case Palet(prDurumUyari): pnl.Cells(SATIR_DURUM, c).Font.Color = Palet(prDikkat)
+        Case Palet(prDurumHata):  pnl.Cells(SATIR_DURUM, c).Font.Color = Palet(prEngel)
+        Case Palet(prDurumOneri): pnl.Cells(SATIR_DURUM, c).Font.Color = Palet(prOneriMetin)
+        Case Else:                pnl.Cells(SATIR_DURUM, c).Font.Color = Palet(prIkincilMetin)
+    End Select
     DurumYaz = metin
 
 End Function

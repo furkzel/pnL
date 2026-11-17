@@ -766,6 +766,23 @@ Public Sub Yardim()
 End Sub
 
 
+' UX-03 klavye kisayollari: Ctrl+Shift+1 Yenile, 2 Eslestir, 3 On Kontrol, 4 AKTAR
+Public Sub KisayollariKur(ByVal ac As Boolean)
+    Dim i As Long
+    Dim makrolar As Variant
+    makrolar = Array("Yenile", "OtomatikEslestir", "OnKontrol", "Aktar")
+    On Error Resume Next
+    For i = 0 To UBound(makrolar)
+        If ac Then
+            Application.OnKey "^+" & (i + 1), "'" & ThisWorkbook.Name & "'!" & CStr(makrolar(i))
+        Else
+            Application.OnKey "^+" & (i + 1)
+        End If
+    Next i
+    On Error GoTo 0
+End Sub
+
+
 ' Workbook_Open ve Tani'dan: Excel'i her durumda normale dondurur
 ' (bir makro yarida kesilip olaylar kapali kaldiysa).
 Public Sub UygulamaDurumunuOnar()
