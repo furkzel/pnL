@@ -140,8 +140,10 @@ Public Sub GeriAl()
                     Else
                         ' PARMAK IZI: aktarimdan sonra satir eklendi/silindi mi?
                         kayitliImza = Trim$(GuvenliMetin(v(i, G_IMZA)))
-                        If kayitliImza <> IMZA_YOK Then
-                            If AralikImzasi(hedefWs, gNo, ilkS, sonS, (Left$(kayitliImza, 2) = "F;")) <> kayitliImza Then
+                        If kayitliImza = "?" Then
+                            sorun = sorun & "- Gecersiz parmak izi: " & sutunHarf & vbNewLine
+                        ElseIf kayitliImza <> IMZA_YOK Then
+                            If AralikImzasi(hedefWs, gNo, ilkS, sonS, (Left$(kayitliImza, 2) = "F;"), (Mid$(kayitliImza, 3, 6) <> "CRC32=")) <> kayitliImza Then
                                 imzaFarki = imzaFarki & "   " & sutunHarf & " (" & GuvenliMetin(v(i, G_KAYNAK_SUTUN)) & _
                                             ") satir " & ilkS & " - " & sonS & vbNewLine
                             End If
@@ -321,7 +323,7 @@ End Function
 '  yazilir: bolgesel ayardan (virgul/nokta) etkilenmez.
 ' ============================================================
 Public Function AralikImzasi(ByVal ws As Worksheet, ByVal sutun As Long, ByVal ilk As Long, _
-                             ByVal son As Long, ByVal formulMu As Boolean) As String
+                             ByVal son As Long, ByVal formulMu As Boolean, Optional ByVal eski As Boolean = False) As String
 
     Dim rng As Range
     Dim v As Variant, x As Variant
@@ -340,6 +342,11 @@ Public Function AralikImzasi(ByVal ws As Worksheet, ByVal sutun As Long, ByVal i
         x = v
         ReDim v(1 To 1, 1 To 1)
         v(1, 1) = x
+    End If
+
+    If Not eski Then
+        AralikImzasi = IIf(formulMu, "F;", "V;") & "CRC32=" & DiziKarmasi(v)
+        Exit Function
     End If
 
     For i = 1 To UBound(v, 1)

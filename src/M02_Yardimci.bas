@@ -425,17 +425,78 @@ Public Function SayiDegeri(ByVal x As Variant, ByRef deger As Double) As Boolean
             deger = CDbl(x)
             SayiDegeri = True
         Case vbString
-            If Trim$(x) <> "" And IsNumeric(Trim$(x)) Then
-                On Error Resume Next
-                deger = CDbl(Trim$(x))
-                SayiDegeri = (Err.Number = 0)
-                Err.Clear
-                On Error GoTo 0
-            End If
+            SayiDegeri = MetinSayisi(CStr(x), deger)
     End Select
 
 End Function
 
+
+
+' Locale-independent decimal parser. A single separator followed by three
+' digits is ambiguous (1.234 / 1,234) and is deliberately rejected.
+' Parentheses, exponents, currency symbols and malformed groups are rejected.
+Public Function MetinSayisi(ByVal metin As String, ByRef deger As Double) As Boolean
+    Dim s As String, tam As String, kesir As String, ayrac As String
+    Dim ondalik As String, gruplar As Variant, parca As Variant
+    Dim i As Long, nokta As Long, virgul As Long, yer As Long
+    Dim isaret As Double, sonuc As Double, carpan As Double, ch As String
+    On Error GoTo Gecersiz
+    deger = 0
+    s = Trim$(metin)
+    If Len(s) = 0 Then Exit Function
+    isaret = 1
+    If Left$(s, 1) = "-" Then isaret = -1
+    If Left$(s, 1) = "-" Or Left$(s, 1) = "+" Then s = Mid$(s, 2)
+    If Len(s) = 0 Then Exit Function
+    nokta = InStrRev(s, ".")
+    virgul = InStrRev(s, ",")
+    If nokta > 0 And virgul > 0 Then
+        If nokta > virgul Then
+            ondalik = ".": ayrac = ",": yer = nokta
+        Else
+            ondalik = ",": ayrac = ".": yer = virgul
+        End If
+    ElseIf nokta > 0 Or virgul > 0 Then
+        yer = nokta + virgul
+        ondalik = Mid$(s, yer, 1)
+        If InStr(s, ondalik) <> yer Then
+            ayrac = ondalik: ondalik = "": yer = 0
+        ElseIf Len(s) - yer = 3 Then
+            Exit Function
+        End If
+    End If
+    tam = s
+    If yer > 0 Then
+        tam = Left$(s, yer - 1): kesir = Mid$(s, yer + 1)
+        If Len(kesir) = 0 Then Exit Function
+    End If
+    If Len(tam) = 0 Then Exit Function
+    If ayrac <> "" Then
+        gruplar = Split(tam, ayrac)
+        If Len(gruplar(0)) < 1 Or Len(gruplar(0)) > 3 Then Exit Function
+        For i = 1 To UBound(gruplar)
+            If Len(gruplar(i)) <> 3 Then Exit Function
+        Next i
+        tam = Join(gruplar, "")
+    End If
+    For i = 1 To Len(tam)
+        ch = Mid$(tam, i, 1)
+        If ch < "0" Or ch > "9" Then Exit Function
+        sonuc = sonuc * 10 + AscW(ch) - 48
+    Next i
+    carpan = 0.1
+    For i = 1 To Len(kesir)
+        ch = Mid$(kesir, i, 1)
+        If ch < "0" Or ch > "9" Then Exit Function
+        sonuc = sonuc + (AscW(ch) - 48) * carpan
+        carpan = carpan / 10
+    Next i
+    deger = isaret * sonuc
+    MetinSayisi = True
+    Exit Function
+Gecersiz:
+    deger = 0
+End Function
 
 ' Hucre degeri gecerli bir TARIH mi? (Excel'in ISNUMBER mantigi:
 ' gercek tarih veya tarih seri numarasi). Metin tarih SAYILMAZ.
