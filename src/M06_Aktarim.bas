@@ -1970,6 +1970,15 @@ Private Sub Yaz(ByRef p As AktarimPlani)
     n = p.n
     u = p.uygun
 
+    tutarVar = (p.tutarJ > 0)
+    If tutarVar Then
+        kol = p.kv(p.tutarJ)
+        For i = 1 To n
+            If SayiDegeri(kol(u(i), 1), deger) Then kaynakToplam = kaynakToplam + CCur(deger)
+        Next i
+        hedefOnceki = KolonToplami(p.hedefWs, p.tutarHedefNo)
+    End If
+
     ' --- Satir ekleme ONAYDAN SONRA (iptalde bos satir kalmasin) ---
     If p.eklenecekSatir > 0 Then
         p.hedefWs.Rows(p.boslukSon + 1).Resize(p.eklenecekSatir).Insert Shift:=xlDown
@@ -1980,13 +1989,7 @@ Private Sub Yaz(ByRef p As AktarimPlani)
     End If
 
     ' --- Mutabakat: once ---
-    tutarVar = (p.tutarJ > 0)
     If tutarVar Then
-        kol = p.kv(p.tutarJ)
-        For i = 1 To n
-            If SayiDegeri(kol(u(i), 1), deger) Then kaynakToplam = kaynakToplam + CCur(deger)
-        Next i
-        hedefOnceki = KolonToplami(p.hedefWs, p.tutarHedefNo)
         eskiAralik = AralikToplami(p.hedefWs, p.tutarHedefNo, p.baslangic(p.tutarJ), p.baslangic(p.tutarJ) + n - 1)
     End If
 
