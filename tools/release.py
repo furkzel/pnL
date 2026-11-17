@@ -1,7 +1,7 @@
 """
 release.py - build the three download packages for a release.
 
-  python tools/release.py [--version v1.0]
+  python tools/release.py [--version v1.1]
 
 Output in dist/release/:
   AktarimPaneli_<v>.xlsm          workbook + macros (ready to use)
@@ -39,7 +39,7 @@ ayri indirilir, sizin bilgisayarinizda birlestirilir.
 2) Alt+F11 ile VBA editorunu acin.
    File > Import File... ile bu klasordeki dosyalari TEK TEK ice aktarin:
        Sozluk.cls
-       M01_Ayarlar.bas ... M10_Denetim.bas  (10 dosya)
+       M01_Ayarlar.bas ... M16_Bellek.bas  (15 dosya)
 
 3) Sol panelde "Panel" sayfasinin kod sayfasina (parantez icinde "Panel"
    yazan satir) cift tiklayin. Panel_sayfa_kodu.txt dosyasini Not
@@ -91,7 +91,7 @@ def crlf(text: str) -> bytes:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--version", default="v1.0")
+    ap.add_argument("--version", default="v1.1")
     a = ap.parse_args(argv)
     v = a.version
     out = xlauto.ROOT / "dist" / "release"

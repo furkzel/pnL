@@ -72,10 +72,10 @@
 
 <main class="wrap">
   <aside class="wrap" role="note" style="padding-top:16px">
-    <strong>v1.1 geliştirme durumu:</strong> Kurumsal sürüm henüz tamamlanmadı.
-    Excel doğrulaması ve K9–K14/Analiz çalışmaları tamamlanmayı bekliyor. Aşağıdaki indirmeler
-    ve ekran görüntüleri yayımlanmış v1.0 sürümüne aittir.
-    <a href="https://github.com/furkzel/pnL/blob/codex/enterprise-v1.1/plan/V1.1_SONUC.md">Kapsam ve doğrulama raporu</a>
+    <p class="note"><strong>v1.1 “Kurumsal Sürüm”:</strong> kaynak kod tamamlandı, Windows + Excel doğrulaması
+    (derleme, uçtan uca testler, performans, ekran görüntüleri) henüz yapılmadı. Bu yüzden aşağıdaki indirmeler
+    ve ekran görüntüleri yayımlanmış <strong>v1.0</strong> sürümüne aittir; v1.1 yayın paketi doğrulamadan sonra eklenecek.
+    <a href="https://github.com/furkzel/pnL/blob/main/plan/V1.1_SONUC.md">Kapsam ve doğrulama raporu</a></p>
   </aside>
 
 
@@ -113,6 +113,25 @@
 
 <section>
   <img class="shot" src="panel_v1.0.png" alt="Aktarım Paneli v1.0: 1-2-3-4 iş akışı şeridi, HAZIRLIK göstergesi, ayar kartları, K1–K8 kontrol karnesi ve eşleştirme tablosu">
+</section>
+
+<section>
+  <h2>v1.1'de neler değişiyor</h2>
+  <div class="grid">
+    <div class="card"><h3>14 kontrol noktası</h3>
+      <p>K9 anahtar tekilliği, K10 dönem tutarlılığı, K11 makullük (12 ay z-skoru, büyük hasar, Benford), K12 şema ve kod kayması,
+         K13 kırılım bazında mutabakat, K14 Ön Kontrol → Aktar kaynak izi ve soy.</p></div>
+    <div class="card"><h3>Eksiksizliği kanıtlayan mutabakat</h3>
+      <p>Ana tutarda 4'lü, sayısal sütunlarda 3'lü mutabakat, satır ve hücre adedi, branş bazında ana dosyadan geri okuma. Currency ile kuruşuna.</p></div>
+    <div class="card"><h3>Veri kalitesi skoru</h3>
+      <p>Tamlık, geçerlilik, tekillik, makullük ve mutabakattan 0–100 skor; karnede ve Denetim'de, hedef Ayarlar'da.</p></div>
+    <div class="card"><h3>Analiz sayfası</h3>
+      <p>Boyut, ölçü, filtre ve dönemle özet; grafik ve 3 maddelik yorum. Şablonlar: veri profili, ay-ay z-skor, gelişim üçgeni (zincir merdiven faktörleri), ihbar gecikmesi, büyük hasar, frekans/şiddet.</p></div>
+    <div class="card"><h3>Durum bilen şerit</h3>
+      <p>Yalnız sıradaki adım dolgulu, bitenlerde ✓, ENGEL varken AKTAR soluk; Geri Al ayrı ve kırmızı çerçeveli. Bilgi mesajları ekranı kilitlemez, bildirim şeridine düşer.</p></div>
+    <div class="card"><h3>Ayarlar ve denetim izi</h3>
+      <p>Tüm eşikler düzenlenebilir, varsayılandan sapanlar Denetim'de listelenir. Rapor'a kaynak yolu, boyutu, zamanı, izler, süre ve metrikler yazılır.</p></div>
+  </div>
 </section>
 
 <section>
@@ -211,7 +230,8 @@
       <h3>Yapmaz</h3>
       <ul>
         <li>İnternete ya da başka bir sunucuya bağlanmaz, veri göndermez.</li>
-        <li>Dosya silmez, Windows ayarlarını değiştirmez, ActiveX veya dış kütüphane kullanmaz.</li>
+        <li>Windows ayarlarını değiştirmez, ActiveX veya dış kütüphane kullanmaz. Silebildiği tek dosya, v1.1'de aktarım
+            sırasında ana dosyanın yanına kendisinin yazdığı <code>.aplock</code> kilit dosyasıdır.</li>
         <li>Kodun tamamı açık metindir: <a href="https://github.com/furkzel/pnL/tree/main/src">src/</a>.</li>
       </ul>
     </div>

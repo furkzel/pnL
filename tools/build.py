@@ -40,8 +40,13 @@ except Exception:
 
 def clean_log_sheets(s, wb) -> None:
     """A distribution workbook ships with header-only Rapor and Gecmis: the
-    KURULUM row written by SifirdanKur carries the builder's user names."""
-    for name in ("Rapor", "Gecmis"):
+    KURULUM row written by SifirdanKur carries the builder's user names.
+    The hidden Bellek sheet (notifications, pre-check fingerprints) is
+    emptied for the same reason; Yedek must not exist in a new workbook."""
+    names = [ws.Name for ws in wb.Worksheets]
+    for name in ("Rapor", "Gecmis", "Bellek"):
+        if name not in names:
+            continue
         ws = wb.Worksheets(name)
         ws.Unprotect()
         last = ws.UsedRange.Row + ws.UsedRange.Rows.Count - 1
@@ -76,6 +81,8 @@ def main(argv=None) -> int:
     problems = check_ascii(src_dir) if args.historical_source else check_sources(src_dir)
     if not problems and not args.historical_source:
         problems.extend(check_contrast(src_dir))
+        from vba_lint import lint  # portable static compile checks
+        problems.extend(lint(src_dir))
     if problems:
         print("SOURCE CHECK FAILED:")
         print("\n".join(problems))

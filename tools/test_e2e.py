@@ -136,6 +136,7 @@ FILTRE = C + 3
 ISLEM = C + 4
 HARITA = C + 5
 KARNE = C + 5
+KARNE_NOT = 24
 ILK = 29
 
 
@@ -157,8 +158,39 @@ def rapor_since(rpr, start_row):
     return "\n".join(str(rpr.Cells(r, 7).Value or "") for r in range(start_row + 1, last + 1))
 
 
+class Mark(int):
+    """Position in the dialog log plus the notification count at the same moment.
+
+    v1.1 moved informational MsgBoxes to the ribbon notification strip
+    (UX-01). Their full text is kept in the hidden Bellek sheet, so a check
+    that used to read a dialog now reads dialogs + notifications written since
+    the mark: same text, same assertion, same strictness."""
+    notes = 0
+
+
+CURRENT = {"wb": None}
+
+
+def notes(wb):
+    try:
+        ws = wb.Worksheets("Bellek")
+    except Exception:
+        return []
+    last = ws.Cells(ws.Rows.Count, 5).End(-4162).Row
+    return [f"{ws.Cells(r, 7).Value or ''}\n{ws.Cells(r, 8).Value or ''}" for r in range(2, last + 1)]
+
+
+def mark(s):
+    m = Mark(len(s.watcher.events))
+    m.notes = len(notes(CURRENT["wb"])) if CURRENT["wb"] is not None else 0
+    return m
+
+
 def dialogs_since(s, start):
-    return "\n".join(e.text for e in s.watcher.events[start:])
+    text = "\n".join(e.text for e in s.watcher.events[int(start):])
+    if CURRENT["wb"] is not None:
+        text += "\n" + "\n".join(notes(CURRENT["wb"])[getattr(start, "notes", 0):])
+    return text
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +201,7 @@ def run_main(panel_path: Path, work: Path):
     with xlauto.ExcelSession(policy=pol) as s:
         xl = s.xl
         wbP = xl.Workbooks.Open(str(panel_path))
+        CURRENT["wb"] = wbP
         src = make_source(xl, work)
         mst = make_master(xl, work)
         wsS = src.Worksheets("Sayfa1")
@@ -183,7 +216,7 @@ def run_main(panel_path: Path, work: Path):
         pnl.Cells(11, AYAR).Value = "Sayfa1"
         pnl.Cells(14, AYAR).Value = mst.Name
         pnl.Cells(15, AYAR).Value = "Ana"
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "Yenile")
         check("yenile summary shown", "YENILE TAMAMLANDI" in dialogs_since(s, k0), dialogs_since(s, k0))
         check("source columns listed", pnl.Cells(ILK, C).Value == "A - Pol No", str(pnl.Cells(ILK, C).Value))
@@ -218,7 +251,7 @@ def run_main(panel_path: Path, work: Path):
         pnl.Cells(9, C + 4).Value = "EYLUL 2026"
         check("sabit box opened next row", pnl.Cells(10, C + 3).Interior.Color != 16777215)
 
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "OtomatikEslestir")
         msg = dialogs_since(s, k0)
         check("auto-map reported", "OTOMATIK ESLESTIRME" in msg, msg)
@@ -233,7 +266,7 @@ def run_main(panel_path: Path, work: Path):
         wbP.Activate()
         pnl.Activate()
         pnl.Range("A1").Select()
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "OneriOnayla")
         check("smart approve -> all", "TUM ONERILERI ONAYLA" in dialogs_since(s, k0), dialogs_since(s, k0))
         check("suggestion approved", pnl.Cells(r_tutar, HEDEF).Comment is None)
@@ -288,7 +321,7 @@ def run_main(panel_path: Path, work: Path):
         print("\n[2] On Kontrol")
         rpr = wbP.Worksheets("Rapor")
         r0 = last_row(rpr)
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "OnKontrol")
         msg = dialogs_since(s, k0) + "\n" + rapor_since(rpr, r0)
         check("dry run: suspicious tail", "SUPHELI" in msg, msg)
@@ -329,13 +362,13 @@ def run_main(panel_path: Path, work: Path):
         print("\n[3] Filters")
         for ftext, expected in (("ALLIANZ, INC", 50), ("AXA, MAPFRE", 100), ("AL*", 100), ("<>AXA", 150)):
             pnl.Cells(r_sirket, FILTRE).Value = ftext
-            k0 = len(s.watcher.events)
+            k0 = mark(s)
             s.run(wbP, "OnKontrol")
             msg = dialogs_since(s, k0)
             check(f"filter '{ftext}' -> {expected}", f"Aktarilacak : {expected} satir" in msg, msg[:300])
         pnl.Cells(r_sirket, FILTRE).Value = None
         pnl.Cells(r_tutar, FILTRE).Value = ">3000"
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "OnKontrol")
         exp = sum(1 for i in range(N_ROWS) if 1000 + i * 12.5 > 3000)
         check(f"filter '>3000' -> {exp}", f"Aktarilacak : {exp} satir" in dialogs_since(s, k0))
@@ -345,7 +378,7 @@ def run_main(panel_path: Path, work: Path):
         print("\n[4] Aktar")
         src_total = sum(1000 + i * 12.5 for i in range(N_ROWS))
         before_total = sum(100.0 + i for i in range(MASTER_ROWS))
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "Aktar")
         msg = dialogs_since(s, k0)
         first = MASTER_ROWS + 2
@@ -372,27 +405,31 @@ def run_main(panel_path: Path, work: Path):
         check("Rapor: reconciliation cell green", rpr.Cells(aktar_row, 20).Interior.Color == 0xE7FCDC, hex(int(rpr.Cells(aktar_row, 20).Interior.Color)))
         dikkat_rows = [r for r in range(2, aktar_row) if rpr.Cells(r, 3).Value == "DIKKAT" and str(rpr.Cells(r, 27).Value or "").startswith("K")]
         check("OnayAl wrote every DIKKAT item (tagged)", len(dikkat_rows) >= 4, str(len(dikkat_rows)))
-        check("scorecard K7 after transfer", "✓" in str(pnl.Cells(15, KARNE).Value) and "FARK 0,00" in str(pnl.Cells(17, KARNE).Value),
-              str(pnl.Cells(15, KARNE).Value) + " | " + str(pnl.Cells(17, KARNE).Value))
+        # v1.1 layout: K1..K14 on rows 9..22, quality 23, note 24 (was 17)
+        check("scorecard K7 after transfer", "✓" in str(pnl.Cells(15, KARNE).Value) and "FARK 0,00" in str(pnl.Cells(KARNE_NOT, KARNE).Value),
+              str(pnl.Cells(15, KARNE).Value) + " | " + str(pnl.Cells(KARNE_NOT, KARNE).Value))
         den = wbP.Worksheets("Denetim")
         check("Denetim sheet refreshed", den.Cells(6, 2).Value == 1 and den.Cells(6, 4).Value == 1,
               f"{den.Cells(6, 2).Value!r} {den.Cells(6, 4).Value!r}")
         check("Denetim: K8 statistics", (den.Cells(18, 4).Value or 0) >= 1, repr(den.Cells(18, 4).Value))
-        check("Denetim: last transfer row", den.Cells(22, 10).Value == "TUTUYOR" and den.Cells(22, 11).Value == "ETKIN",
-              f"{den.Cells(22, 10).Value!r} {den.Cells(22, 11).Value!r}")
+        # v1.1: K1..K14 and process metrics push the table down; locate it by its header
+        hr = next(r for r in range(10, 80) if den.Cells(r, 10).Value == "MUTABAKAT")
+        check("Denetim: last transfer row", den.Cells(hr + 1, 10).Value == "TUTUYOR" and den.Cells(hr + 1, 11).Value == "ETKIN",
+              f"{den.Cells(hr + 1, 10).Value!r} {den.Cells(hr + 1, 11).Value!r}")
         check("Rapor: onceki/yeni toplam", abs(rpr.Cells(aktar_row, 25).Value - before_total) < 0.005
               and abs(rpr.Cells(aktar_row, 26).Value - (before_total + src_total)) < 0.005, "")
         gec = wbP.Worksheets("Gecmis")
         gl = last_row(gec)
         check("Gecmis rows (8 mapped + 2 fixed)", gl - 1 == 10, str(gl))
-        check("Gecmis fingerprint", str(gec.Cells(gl, 15).Value).startswith("V;n="), str(gec.Cells(gl, 15).Value))
-        k0 = len(s.watcher.events)
+        # v1.1: full-range typed CRC32 replaces the v1.0 count/sum summary (M6)
+        check("Gecmis fingerprint", str(gec.Cells(gl, 15).Value).startswith("V;C2="), str(gec.Cells(gl, 15).Value))
+        k0 = mark(s)
         s.run(wbP, "OnKontrol")
         check("dry run: duplicate-transfer warning", "MUKERRER AKTARIM UYARISI" in dialogs_since(s, k0), dialogs_since(s, k0)[:400])
 
         # ---------------- 5. Geri Al ----------------
         print("\n[5] Geri Al")
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "GeriAl")
         check("undo cleared rows", last_row(wsM) == MASTER_ROWS + 1, str(last_row(wsM)))
         check("Gecmis marked", gec.Cells(gl, 11).Value == "GERI ALINDI", str(gec.Cells(gl, 11).Value))
@@ -404,14 +441,14 @@ def run_main(panel_path: Path, work: Path):
         check("re-transfer", last_row(wsM) == lastr, str(last_row(wsM)))
         wsM.Rows(500).Insert()                      # user inserts a row above the block
         pol.set(("PARMAK IZI", "&No"), ("parmak iziyle", "&No"))
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "GeriAl")
         msg = dialogs_since(s, k0)
         pol.set()
         check("fingerprint warning shown", "TUTMUYOR" in msg, msg[:400])
         check("nothing cleared after 'No'", last_row(wsM) == lastr + 1, str(last_row(wsM)))
         wsM.Rows(500).Delete()                      # user fixes it
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "GeriAl")
         msg = dialogs_since(s, k0)
         check("no warning once fixed", "TUTMUYOR" not in msg, msg[:300])
@@ -423,7 +460,7 @@ def run_main(panel_path: Path, work: Path):
         old_d = wsM.Cells(first, 4).Value
         wsS.Range("D2:D%d" % (N_ROWS + 1)).Value = [[1000 + i * 12.5 + 1] for i in range(N_ROWS)]
         pnl.Cells(r_tutar, ISLEM).Value = "SEC"
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "AktarSecili")
         msg = dialogs_since(s, k0)
         check("patch warns about overwrite", "SECILI SUTUN YAMASI" in msg, msg[:500])
@@ -438,7 +475,7 @@ def run_main(panel_path: Path, work: Path):
         check("undo of patch kept other columns", wsM.Cells(first, 1).Value == "0000001")
 
         # ---------------- 7b. Tutar mutabakati (re-check) ----------------
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "TutarMutabakatiSon")
         check("TutarMutabakatiSon: TUTUYOR", "TUTARI TUTUYOR" in dialogs_since(s, k0), dialogs_since(s, k0)[:300])
 
@@ -452,7 +489,7 @@ def run_main(panel_path: Path, work: Path):
         s.run(wbP, "GeriAl")                                   # gap 1002..1051, data below
         pnl.Cells(r_sirket, FILTRE).Value = None
         pnl.Cells(16, AYAR).Value = "Geri alinan araliga"
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "Aktar")                                    # 200 rows into a 50-row gap
         msg = dialogs_since(s, k0)
         check("gap mode warns about inserted rows", "SATIR EKLENECEK" in msg, msg[:400])
@@ -494,7 +531,7 @@ def run_main(panel_path: Path, work: Path):
         check("rebuild keeps fixed value", pnl.Cells(9, C + 4).Value == "EYLUL 2026", str(pnl.Cells(9, C + 4).Value))
         check("rebuild keeps hidden block", pnl.Columns(7).Hidden)
         s.run(wbP, "Yenile")
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "OnKontrol")
         check("after rebuild: ready to transfer", "Aktarilacak : 200 satir" in dialogs_since(s, k0))
         s.run(wbP, "KontrolTemizle")
@@ -516,18 +553,20 @@ def run_main(panel_path: Path, work: Path):
         before = last_row(wsM)
         s.run(wbP, "Aktar")
         check("two panels transferred", last_row(wsM) == before + 2 * N_ROWS, str(last_row(wsM)))
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "TutarMutabakatiSon")
         msg = dialogs_since(s, k0)
         check("batch reconciliation lists both panels", "PANEL 1" in msg and "PANEL 2" in msg and "2 aktarim" in msg, msg)
         check("batch reconciliation TUTUYOR", "TUTARI TUTUYOR" in msg, msg[:300])
         wsM.Cells(before + N_ROWS + 1, 4).Value = 999999        # tamper with panel 2 rows
-        k0 = len(s.watcher.events)
+        k0 = mark(s)
         s.run(wbP, "TutarMutabakatiSon")
         msg = dialogs_since(s, k0)
         check("batch reconciliation finds tampering", "FARK VAR" in msg, msg[:400])
         s.run(wbP, "GeriAl")                                   # parti question -> Yes (whole batch)
         check("batch undone", last_row(wsM) == before, str(last_row(wsM)))
+
+        run_v11(s, pol, wbP, pnl, src, mst, wsS, wsM, work)
 
         # ---------------- misc ----------------
         s.run(wbP, "Tani")
@@ -536,6 +575,188 @@ def run_main(panel_path: Path, work: Path):
         wbP.Save()
         print("\n--- dialog log (last 6) ---")
         print(s.watcher.dump(max(0, len(s.watcher.events) - 6))[:4000])
+
+
+# ---------------------------------------------------------------------------
+#  v1.1 scenarios (K9-K14, reconciliation, lineage, lock, retention, Analiz)
+# ---------------------------------------------------------------------------
+R_KAYNAK_YOL, R_ICERIK_IZI, R_SURE_MS, R_ADET, R_KALITE, R_METRIK = 28, 32, 33, 34, 35, 36
+
+
+def bellek_value(wb, key):
+    ws = wb.Worksheets("Bellek")
+    last = ws.Cells(ws.Rows.Count, 1).End(-4162).Row
+    for r in range(2, last + 1):
+        if ws.Cells(r, 1).Value == key:
+            return ws.Cells(r, 2).Value
+    return None
+
+
+def esik(wb, code, value):
+    ws = wb.Worksheets("Ayarlar")
+    for r in range(6, 26):
+        if ws.Cells(r, 2).Value == code:
+            ws.Cells(r, 4).Value = value
+            return
+    raise LookupError(code)
+
+
+def run_v11(s, pol, wbP, pnl, src, mst, wsS, wsM, work):
+    print("\n[10] v1.1: K9-K14, coklu mutabakat, soy, kilit, saklama, Analiz")
+    rpr = wbP.Worksheets("Rapor")
+    gec = wbP.Worksheets("Gecmis")
+    names = [ws.Name for ws in wbP.Worksheets]
+    check("v1.1 sheets present", all(n in names for n in ("Analiz", "Ayarlar", "Denetim")), str(names))
+    check("Bellek very hidden", wbP.Worksheets("Bellek").Visible == 2)
+    check("karne has 14 rows + quality", "K14" in str(pnl.Cells(22, KARNE).Value) and "kalite" in str(pnl.Cells(23, KARNE).Value).lower(),
+          str(pnl.Cells(22, KARNE).Value) + " | " + str(pnl.Cells(23, KARNE).Value))
+    visible = [sh.Name for sh in pnl.Shapes if sh.Visible and str(sh.Name).startswith("AP_BTN_")]
+    check("ribbon: 8 visible buttons", len(visible) == 8, str(visible))
+    check("ribbon: Geri Al ghost red", pnl.Shapes("AP_BTN_GeriAl").Fill.ForeColor.RGB == 0xFFFFFF
+          and pnl.Shapes("AP_BTN_GeriAl").Line.ForeColor.RGB == 0x1C1CB9, "")
+
+    pnl.Cells(8, AYAR).Value = "Evet"
+    pnl.Cells(16, AYAR).Value = "Sayfanin en alti"
+    for r in range(ILK, ILK + 10):
+        pnl.Cells(r, FILTRE).Value = None
+    s.run(wbP, "Yenile")
+    r_pol = panel_row_of(pnl, "A - Pol No")
+    pnl.Cells(r_pol, HEDEF).Value = "A - POLICE NO"
+
+    # --- K11 large claims via an editable threshold, K10 via the period end ---
+    esik(wbP, "K11_BUYUK_HASAR", 3000)
+    pnl.Cells(24, AYAR).Value = dt.datetime(2026, 6, 30)
+    k0 = mark(s)
+    s.run(wbP, "OnKontrol")
+    msg = dialogs_since(s, k0) + "\n" + rapor_since(rpr, last_row(rpr) - 40)
+    exp_big = sum(1 for i in range(N_ROWS) if 1000 + i * 12.5 >= 3000)
+    check("K11 large claims from Ayarlar threshold", f"BUYUK HASAR (>= " in msg and f"{exp_big} satir" in msg, msg[-1500:])
+    check("K10 dates after period end", "DONEM TUTARLILIGI" in msg and "SONRA" in msg, msg[-1500:])
+    check("K10 scorecard DIKKAT", str(pnl.Cells(18, KARNE).Value).startswith("!"), str(pnl.Cells(18, KARNE).Value))
+    check("quality score on scorecard", "/ 100" in str(pnl.Cells(23, KARNE).Value), str(pnl.Cells(23, KARNE).Value))
+    krow = max(r for r in range(2, last_row(rpr) + 1) if str(rpr.Cells(r, 7).Value or "").startswith("On kontrol:"))
+    check("Rapor: quality + metrics on pre-check row", isinstance(rpr.Cells(krow, R_KALITE).Value, float)
+          and "tamlik=" in str(rpr.Cells(krow, R_METRIK).Value), str(rpr.Cells(krow, R_METRIK).Value))
+    esik(wbP, "K11_BUYUK_HASAR", None)
+    pnl.Cells(24, AYAR).Value = None
+
+    # --- K9: key uniqueness and exact copy ---
+    pnl.Cells(22, AYAR).Value = "A - POLICE NO"
+    keep = wsS.Range("A60:H60").Value
+    wsS.Range("A60:H60").Value = wsS.Range("A2:H2").Value
+    wsS.Range("G60").Formula = "=D60*2"
+    k0 = mark(s)
+    s.run(wbP, "OnKontrol")
+    msg = dialogs_since(s, k0)
+    check("K9 exact copy row -> ENGEL", "BIREBIR KOPYA" in msg and "✕" in str(pnl.Cells(17, KARNE).Value),
+          str(pnl.Cells(17, KARNE).Value) + msg[-600:])
+    esik(wbP, "K9_KOPYA_ENGEL", 0)
+    s.run(wbP, "OnKontrol")
+    check("K9 copy ENGEL configurable -> DIKKAT", str(pnl.Cells(17, KARNE).Value).startswith("!"), str(pnl.Cells(17, KARNE).Value))
+    esik(wbP, "K9_KOPYA_ENGEL", None)
+    wsS.Range("A60:H60").Value = keep
+    wsS.Range("G60").Formula = "=D60*2"
+
+    # --- K14: source changed after the pre-check blocks AKTAR ---
+    s.run(wbP, "OnKontrol")
+    check("K14 fingerprint stored", str(bellek_value(wbP, "OKIZ|1") or "").count("n=") == 1, str(bellek_value(wbP, "OKIZ|1")))
+    old = wsS.Range("D10").Value
+    wsS.Range("D10").Value = old + 1
+    before = last_row(wsM)
+    k0 = mark(s)
+    s.run(wbP, "Aktar")
+    msg = dialogs_since(s, k0)
+    check("K14 ENGEL after source change", "ON KONTROL'DEN SONRA DEGISTI" in msg and last_row(wsM) == before, msg[-600:])
+    wsS.Range("D10").Value = old
+    s.run(wbP, "OnKontrol")
+
+    # --- M12 lock held by someone else blocks AKTAR ---
+    lock = Path(mst.FullName + ".aplock")
+    lock.write_text("baska.kullanici\nPC-9\n" + dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\nx\n", encoding="ascii")
+    k0 = mark(s)
+    s.run(wbP, "Aktar")
+    msg = dialogs_since(s, k0)
+    check("M12 foreign lock -> ENGEL", "KILITLI" in msg and last_row(wsM) == before, msg[-400:])
+    lock.unlink()
+
+    # --- AKTAR: multi reconciliation, count, K13, lineage, content trace ---
+    s.run(wbP, "OnKontrol")
+    s.run(wbP, "Aktar")
+    check("v1.1 transfer appended", last_row(wsM) == before + N_ROWS, str(last_row(wsM)))
+    check("lock released after transfer", not lock.exists())
+    ar = max(r for r in range(2, last_row(rpr) + 1) if rpr.Cells(r, 3).Value == "AKTARIM")
+    check("Rapor: row-count reconciliation", str(rpr.Cells(ar, R_ADET).Value).startswith("TUTUYOR"), str(rpr.Cells(ar, R_ADET).Value))
+    check("Rapor: source lineage path", str(rpr.Cells(ar, R_KAYNAK_YOL).Value).endswith(src.Name), str(rpr.Cells(ar, R_KAYNAK_YOL).Value))
+    check("Rapor: content trace", str(rpr.Cells(ar, R_ICERIK_IZI).Value).startswith("n=200;t="), str(rpr.Cells(ar, R_ICERIK_IZI).Value))
+    check("Rapor: duration ms", (rpr.Cells(ar, R_SURE_MS).Value or 0) > 0, str(rpr.Cells(ar, R_SURE_MS).Value))
+    k13 = [str(rpr.Cells(r, 7).Value) for r in range(ar, last_row(rpr) + 1) if "Katmanli mutabakat" in str(rpr.Cells(r, 7).Value or "")]
+    check("K13 layered reconciliation TUTUYOR", any("TUTUYOR" in x for x in k13), str(k13))
+    check("K12 schema stored", str(bellek_value(wbP, "SEMA|1") or "").startswith("|Pol No|"), str(bellek_value(wbP, "SEMA|1")))
+    an = wbP.Worksheets("Analiz")
+    s.run(wbP, "AnalizAc")
+    an.Range("D5").Value = next(an.Cells(r, 30).Value for r in range(1, 20) if str(an.Cells(r, 30).Value or "").startswith("A7"))
+    s.run(wbP, "AnalizCalistir")
+    check("Analiz template A7 (transfer impact)", an.Cells(24, 2).Value == 1 and str(an.Cells(24, 10).Value).startswith("TUTUYOR"),
+          f"{an.Cells(24, 2).Value!r} {an.Cells(24, 10).Value!r}")
+
+    # --- K2 content-based duplicate with a renamed copy of the source ---
+    copy = work / "Yeniden_adlandirildi.xlsx"
+    src.SaveCopyAs(str(copy))
+    src2 = s.xl.Workbooks.Open(str(copy))
+    pnl.Cells(10, AYAR).Value = src2.Name
+    pnl.Cells(11, AYAR).Value = "Sayfa1"
+    s.run(wbP, "Yenile")
+    k0 = mark(s)
+    s.run(wbP, "OnKontrol")
+    msg = dialogs_since(s, k0)
+    check("K2 content trace catches renamed file", "ICERIK AYNI" in msg, msg[-600:])
+    pnl.Cells(10, AYAR).Value = src.Name
+    pnl.Cells(11, AYAR).Value = "Sayfa1"
+    src2.Close(False)
+    s.run(wbP, "Yenile")
+    s.run(wbP, "GeriAl")
+    check("undo v1.1 transfer", last_row(wsM) == before, str(last_row(wsM)))
+
+    # --- Denetim ---
+    den = wbP.Worksheets("Denetim")
+    check("Denetim: K14 row", "K14" in str(den.Cells(24, 2).Value), str(den.Cells(24, 2).Value))
+    check("Denetim: findings-per-run is numeric", isinstance(den.Cells(18, 6).Value, float), repr(den.Cells(18, 6).Value))
+    check("Denetim: one A4 page", den.PageSetup.FitToPagesTall == 1 and den.PageSetup.Orientation == 2)
+
+    # --- Analiz ---
+    an = wbP.Worksheets("Analiz")
+    s.run(wbP, "AnalizAc")
+    an.Range("D5").Value = next(an.Cells(r, 30).Value for r in range(1, 20) if str(an.Cells(r, 30).Value or "").startswith("A3"))
+    an.Range("D6").Value = "PANEL 1  \u00b7  Ayl" + "\u0131" + "k dosya"
+    an.Range("D7").Value = "E - Sirket"
+    an.Range("D8").Value = None
+    an.Range("D9").Value = "Toplam"
+    an.Range("D10").Value = "D - Odenen Tutar"
+    an.Range("D11").Value = "E - Sirket"
+    an.Range("D12").Value = "AXA"
+    k0 = mark(s)
+    s.run(wbP, "AnalizCalistir")
+    exp = sum(1000 + i * 12.5 for i in range(N_ROWS) if i % 4 == 0)
+    tr = 24
+    check("Analiz: filtered group total", an.Cells(tr, 2).Value == "AXA" and abs((an.Cells(tr, 4).Value or 0) - exp) < 0.005,
+          f"{an.Cells(tr, 2).Value!r} {an.Cells(tr, 4).Value!r} vs {exp}")
+    check("Analiz: chart drawn", an.ChartObjects.Count >= 1)
+    check("Analiz: commentary", str(an.Cells(18, 2).Value or "").startswith("\u2022"), str(an.Cells(18, 2).Value))
+    for tpl, probe in (("A1", "Pol No"), ("A5", "negatif"), ("A6", "SIRA"), ("A8", "K14")):
+        sel = next(an.Cells(r, 30).Value for r in range(1, 20) if str(an.Cells(r, 30).Value or "").startswith(tpl))
+        an.Range("D5").Value = sel
+        s.run(wbP, "AnalizCalistir")
+        blob = " ".join(str(an.Cells(r, c).Value or "") for r in range(23, 45) for c in range(2, 6))
+        check(f"Analiz template {tpl}", probe in blob, blob[:300])
+    pol.set(("hangi adla kaydedilsin", ("BENIM SABLONUM", "OK")))
+    s.run(wbP, "AnalizSablonKaydet")
+    pol.set()
+    check("Analiz: user template saved", any(an.Cells(r, 30).Value == "BENIM SABLONUM" for r in range(1, 30)))
+
+    # --- protection of new sheets ---
+    s.run(wbP, "KorumalariUygula")
+    check("Ayarlar protected, values editable", wbP.Worksheets("Ayarlar").ProtectContents and not wbP.Worksheets("Ayarlar").Cells(6, 4).Locked)
+    check("Analiz card editable", not an.Cells(5, 4).Locked and an.Cells(5, 2).Locked)
 
 
 def _has_validation(cell) -> bool:
@@ -653,7 +874,8 @@ def run_migration_v34(work: Path):
     with xlauto.ExcelSession() as s:
         wb = s.xl.Workbooks.Open(str(new))
         pnl = wb.Worksheets("Panel")
-        check("marker now v1.0", "v1.0" in wb.Names("AP_DUZEN").RefersTo)
+        # v1.1 bumped the layout marker (K9-K14 rows, settings 22-24)
+        check("marker now v1.1", '"v1.1"' in wb.Names("AP_DUZEN").RefersTo, wb.Names("AP_DUZEN").RefersTo)
         check("v34: mapping kept", pnl.Cells(r_pol, 3).Value == "A - POLICE NO" and pnl.Cells(r_sir, 3).Value == "E - SIRKET")
         check("v34: filter moved to c+3", pnl.Cells(r_sir, 4).Value == "AXA, MAPFRE", repr(pnl.Cells(r_sir, 4).Value))
         check("v34: ISLEM moved to c+4", "FORM" in str(pnl.Cells(r_hes, 5).Value or ""), repr(pnl.Cells(r_hes, 5).Value))
@@ -664,9 +886,90 @@ def run_migration_v34(work: Path):
         wb.Close(False)
 
 
+V10_COMMIT = "c5ff829"   # v1.0 release: 8 control points, AP_DUZEN = "v1.0"
+
+
+def run_migration_v10(work: Path):
+    """Build a REAL v1.0 workbook from the release commit, transfer with it
+    (v1.0 'V;n=' fingerprints, 27 Rapor columns), upgrade a copy with the
+    current code and check settings, mappings, logs and legacy undo."""
+    import subprocess
+    import tarfile
+    print("\n[11] v1.0 -> v1.1 gecisi (gercek v1.0 kitabi)")
+    old_src = work / "src_v10"
+    old_src.mkdir()
+    tar = work / "v10.tar"
+    with open(tar, "wb") as f:
+        subprocess.run(["git", "-C", str(ROOT), "archive", V10_COMMIT, "src"], stdout=f, check=True)
+    with tarfile.open(tar) as t:
+        t.extractall(old_src)
+    old = work / "v10_panel.xlsm"
+    build = __import__("build")
+    check("v1.0 workbook built from release commit",
+          build.main(["--new", str(old), "--src", str(old_src / "src"), "--historical-source", "--no-setup"]) == 0)
+    data = work / "v10_data"
+    data.mkdir()
+    with xlauto.ExcelSession() as s:
+        wb = s.xl.Workbooks.Open(str(old))
+        s.run(wb, "SifirdanKur")
+        src = make_source(s.xl, data)
+        mst = make_master(s.xl, data)
+        pnl = wb.Worksheets("Panel")
+        pnl.Cells(10, 3).Value = src.Name
+        pnl.Cells(11, 3).Value = "Sayfa1"
+        pnl.Cells(14, 3).Value = mst.Name
+        pnl.Cells(15, 3).Value = "Ana"
+        s.run(wb, "Yenile")
+        r_pol, r_sir = (panel_row_of(pnl, x) for x in ("A - Pol No", "E - Sirket"))
+        pnl.Cells(r_pol, 3).Value = "A - POLICE NO"
+        pnl.Cells(r_sir, 3).Value = "E - SIRKET"
+        pnl.Cells(r_sir, 4).Value = "AXA, MAPFRE"
+        pnl.Cells(9, 4).Value = "I - RAPOR_DONEMI"
+        pnl.Cells(9, 5).Value = "EYLUL 2026"
+        pnl.Cells(19, 3).Value = "D - TUTAR"
+        pnl.Cells(8, 3).Value = "Evet"
+        s.run(wb, "Aktar")
+        wsM = mst.Worksheets("Ana")
+        moved = last_row(wsM)
+        check("v1.0 transfer written", moved == MASTER_ROWS + 1 + 100, str(moved))
+        rapor_rows = last_row(wb.Worksheets("Rapor"))
+        gec_rows = last_row(wb.Worksheets("Gecmis"))
+        check("v1.0 fingerprint format", str(wb.Worksheets("Gecmis").Cells(gec_rows, 15).Value).startswith("V;n="))
+        wb.Save()
+        mst.Save()
+        wb.Close(False)
+        mst.Close(False)
+        src.Close(False)
+    new = work / "v10_to_v11.xlsm"
+    check("v1.0 -> v1.1 upgrade build", build.main(["--upgrade", str(old), "--out", str(new)]) == 0)
+    with xlauto.ExcelSession() as s:
+        wb = s.xl.Workbooks.Open(str(new))
+        src = s.xl.Workbooks.Open(str(data / "Odenen_2026_09.xlsx"))
+        mst = s.xl.Workbooks.Open(str(data / "Ana_Odenen.xlsx"))
+        pnl = wb.Worksheets("Panel")
+        check("v1.0: marker now v1.1", '"v1.1"' in wb.Names("AP_DUZEN").RefersTo, wb.Names("AP_DUZEN").RefersTo)
+        check("v1.0: mapping kept", pnl.Cells(r_pol, 3).Value == "A - POLICE NO" and pnl.Cells(r_sir, 3).Value == "E - SIRKET")
+        check("v1.0: filter kept", pnl.Cells(r_sir, 4).Value == "AXA, MAPFRE", repr(pnl.Cells(r_sir, 4).Value))
+        check("v1.0: fixed value kept", pnl.Cells(9, 4).Value == "I - RAPOR_DONEMI" and pnl.Cells(9, 5).Value == "EYLUL 2026")
+        check("v1.0: settings kept", pnl.Cells(19, 3).Value == "D - TUTAR" and pnl.Cells(8, 3).Value == "Evet")
+        check("v1.0: new settings rows empty", all(pnl.Cells(r, 3).Value in (None, "") for r in (22, 23, 24)))
+        check("v1.0: scorecard has K14", "K14" in str(pnl.Cells(22, 6).Value), str(pnl.Cells(22, 6).Value))
+        rpr = wb.Worksheets("Rapor")
+        check("v1.0: Rapor rows kept", last_row(rpr) >= rapor_rows, f"{last_row(rpr)} vs {rapor_rows}")
+        check("v1.0: Rapor v1.1 columns added", rpr.Cells(1, 36).Value is not None and rpr.Cells(1, 28).Value is not None)
+        check("v1.0: Gecmis rows kept", last_row(wb.Worksheets("Gecmis")) == gec_rows)
+        check("v1.0: Ayarlar and Analiz created", all(n in [w.Name for w in wb.Worksheets] for n in ("Ayarlar", "Analiz")))
+        s.run(wb, "GeriAl")
+        check("v1.0 transfer undone by v1.1 (legacy fingerprint)", last_row(mst.Worksheets("Ana")) == MASTER_ROWS + 1,
+              str(last_row(mst.Worksheets("Ana"))))
+        wb.Close(False)
+        mst.Close(False)
+        src.Close(False)
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--panel", default=str(ROOT / "dist" / "AktarimPaneli_v1.0.xlsm"))
+    ap.add_argument("--panel", default=str(ROOT / "dist" / "AktarimPaneli_v1.1.xlsm"))
     ap.add_argument("--v33", default=None)
     ap.add_argument("--only-migration", action="store_true")
     args = ap.parse_args()
@@ -681,6 +984,11 @@ def main():
     except Exception:
         traceback.print_exc()
         check("scenario 1-7 completed without exception", False)
+    try:
+        run_migration_v10(work)
+    except Exception:
+        traceback.print_exc()
+        check("v1.0 migration completed without exception", False)
     try:
         run_migration_v34(work)
     except Exception:

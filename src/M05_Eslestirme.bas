@@ -47,8 +47,8 @@ Public Sub OtomatikEslestir()
     son = BlokSonSatir(pnl, k)
     hedefSon = lst.Cells(lst.Rows.Count, LST_HEDEF_SUTUNLAR).End(xlUp).Row
     If son < ILK_SATIR Or Trim$(GuvenliMetin(lst.Cells(1, LST_HEDEF_SUTUNLAR).Value)) = "" Then
-        MsgBox "Once 'YENILE' calistir; PANEL " & k & " icin kaynak ve hedef" & vbNewLine & _
-               "sutunlari yuklensin.", vbExclamation
+        Bildir BS_DIKKAT, "Aktarim Paneli", "Once 'YENILE' calistir; PANEL " & k & " icin kaynak ve hedef" & vbNewLine & _
+               "sutunlari yuklensin."
         Exit Sub
     End If
 
@@ -205,7 +205,7 @@ Public Sub OtomatikEslestir()
     OlayYaz "ESLESTIRME", k, 0, 0, "Otomatik eslestirme: " & birebir & " ayni ad, " & _
             oneriSay & " oneri, " & bosKalan & " bos kaldi, " & elenen & " aday tip nedeniyle elendi", ""
 
-    MsgBox "PANEL " & k & " - OTOMATIK ESLESTIRME" & vbNewLine & vbNewLine & _
+    Bildir BS_BILGI, "Otomatik Eslestirme", "PANEL " & k & " - OTOMATIK ESLESTIRME" & vbNewLine & vbNewLine & _
            "Adi ayni, eslestirildi          : " & birebir & vbNewLine & _
            "ONERI (turuncu, onay bekliyor)  : " & oneriSay & vbNewLine & _
            "Veri tipi uymadigi icin elenen  : " & elenen & vbNewLine & _
@@ -213,14 +213,14 @@ Public Sub OtomatikEslestir()
            "Turuncu hucrenin notunda en iyi 3 aday ve benzerlik" & vbNewLine & _
            "oranlari yazar. Onay: satiri sec > 'Oneri Onayla'" & vbNewLine & _
            "(hicbir satir secili degilse paneldeki tumu onaylanir)." & vbNewLine & vbNewLine & _
-           "Hicbir sey aktarilmadi.", vbInformation, "Otomatik Eslestirme"
+           "Hicbir sey aktarilmadi."
     Exit Sub
 
 Hata:
     EkranAc
-    MsgBox "OTOMATIK ESLESTIRME SIRASINDA HATA" & vbNewLine & vbNewLine & _
+    Bildir BS_ENGEL, "Hata", "OTOMATIK ESLESTIRME SIRASINDA HATA" & vbNewLine & vbNewLine & _
            "Adim : " & adim & vbNewLine & _
-           "Hata : " & Err.Number & " - " & Err.Description, vbCritical, "Hata"
+           "Hata : " & Err.Number & " - " & Err.Description
 
 End Sub
 
@@ -313,9 +313,8 @@ Public Sub OneriOnayla()
                 Application.OnTime Now + TimeValue("00:00:06"), "DurumCubuguTemizle"
                 On Error GoTo 0
             Else
-                MsgBox "PANEL " & k & ": " & adet & " oneri onaylandi." & vbNewLine & vbNewLine & _
-                       metin & IIf(adet > 8, "   ... ve " & (adet - 8) & " tane daha" & vbNewLine, ""), _
-                       vbInformation, "Oneri onayi"
+                Bildir BS_OK, "Oneri onayi", "PANEL " & k & ": " & adet & " oneri onaylandi." & vbNewLine & vbNewLine & _
+                       metin & IIf(adet > 8, "   ... ve " & (adet - 8) & " tane daha" & vbNewLine, "")
             End If
             Exit Sub
         End If
@@ -346,7 +345,7 @@ Private Function SatirOnerileriniKaldir(ByVal pnl As Worksheet, ByVal k As Long,
 
 Hata:
     EkranAc
-    MsgBox "Oneri onaylanirken hata: " & Err.Number & " - " & Err.Description, vbExclamation
+    Bildir BS_DIKKAT, "Aktarim Paneli", "Oneri onaylanirken hata: " & Err.Number & " - " & Err.Description
 
 End Function
 
@@ -377,7 +376,7 @@ Public Sub TumOnerileriOnayla()
     Next i
 
     If adet = 0 Then
-        MsgBox "PANEL " & k & ": onay bekleyen oneri yok.", vbInformation
+        Bildir BS_BILGI, "Aktarim Paneli", "PANEL " & k & ": onay bekleyen oneri yok."
         Exit Sub
     End If
     If adet > 12 Then metin = metin & "   ... ve " & (adet - 12) & " tane daha" & vbNewLine
@@ -401,12 +400,12 @@ Cikis:
     If Err.Number <> 0 Then metin = "HATA"
     EkranAc
     If metin = "HATA" Then
-        MsgBox "Oneriler onaylanirken hata olustu; paneli kontrol et.", vbExclamation
+        Bildir BS_DIKKAT, "Aktarim Paneli", "Oneriler onaylanirken hata olustu; paneli kontrol et."
         Exit Sub
     End If
 
     OlayYaz "ONERI ONAY", k, 0, 0, "Toplu onay, " & adet & " oneri: " & tamMetin, "Onaylandi (toplu)"
-    MsgBox "PANEL " & k & ": " & adet & " oneri onaylandi.", vbInformation, "Oneri onayi"
+    Bildir BS_OK, "Oneri onayi", "PANEL " & k & ": " & adet & " oneri onaylandi."
 
 End Sub
 
@@ -517,7 +516,7 @@ Public Sub ProfilKaydet()
     son = BlokSonSatir(pnl, k)
 
     If son < ILK_SATIR Then
-        MsgBox "PANEL " & k & " bos. Once kaynak dosyayi secip 'YENILE' calistir.", vbExclamation
+        Bildir BS_DIKKAT, "Aktarim Paneli", "PANEL " & k & " bos. Once kaynak dosyayi secip 'YENILE' calistir."
         Exit Sub
     End If
 
@@ -687,20 +686,20 @@ Public Sub ProfilKaydet()
             ogrenilen & " yeni diger ad ogrenildi" & IIf(ornekOgrenme <> "", " (or. " & ornekOgrenme & ")", ""), _
             IIf(oneriSay > 0, oneriSay & " oneri kayitla birlikte onaylandi", "")
 
-    MsgBox "'" & ad & "' profili kaydedildi (PANEL " & k & ")." & vbNewLine & vbNewLine & _
+    Bildir BS_OK, "Profil Kaydet", "'" & ad & "' profili kaydedildi (PANEL " & k & ")." & vbNewLine & vbNewLine & _
            "Eslesen sutun                     : " & eslesen & vbNewLine & _
            "Bilerek eslestirilmemis sutun     : " & bilerekBos & vbNewLine & _
            "Bu ay dosyada olmayan, korunan    : " & korunan & vbNewLine & _
            "Ogrenilen yeni ad (diger ad)      : " & ogrenilen & _
            IIf(ornekOgrenme <> "", vbNewLine & "   ornek: " & ornekOgrenme, "") & vbNewLine & vbNewLine & _
            "Gelecek ay sutun adi bu adlardan biriyle gelirse" & vbNewLine & _
-           "dogrudan eslesir.", vbInformation, "Profil Kaydet"
+           "dogrudan eslesir."
     Exit Sub
 
 Hata:
     EkranAc
-    MsgBox "PROFIL KAYDEDILEMEDI" & vbNewLine & vbNewLine & _
-           "Hata : " & Err.Number & " - " & Err.Description, vbCritical, "Profil Kaydet"
+    Bildir BS_ENGEL, "Profil Kaydet", "PROFIL KAYDEDILEMEDI" & vbNewLine & vbNewLine & _
+           "Hata : " & Err.Number & " - " & Err.Description
 
 End Sub
 
@@ -761,7 +760,7 @@ Public Sub ProfilSil()
 
     ad = AyarMetni(pnl, k, SATIR_PROFIL)
     If ad = "" Then
-        MsgBox "Once bu panelde silinecek profili sec (Profil hucresi).", vbExclamation
+        Bildir BS_DIKKAT, "Aktarim Paneli", "Once bu panelde silinecek profili sec (Profil hucresi)."
         Exit Sub
     End If
 
@@ -779,7 +778,7 @@ Cikis:
     EkranAc
 
     OlayYaz "PROFIL SIL", k, 0, 0, "'" & ad & "' profili silindi", ""
-    MsgBox "'" & ad & "' profili silindi.", vbInformation
+    Bildir BS_OK, "Aktarim Paneli", "'" & ad & "' profili silindi."
 
 End Sub
 
@@ -1289,7 +1288,7 @@ Public Sub SetKaydet()
 
     adet = BlokSayisi(pnl)
     If GorunurBlokSayisi(pnl) = 0 Then
-        MsgBox "Kaydedilecek panel yok.", vbExclamation
+        Bildir BS_DIKKAT, "Aktarim Paneli", "Kaydedilecek panel yok."
         Exit Sub
     End If
 
@@ -1318,22 +1317,25 @@ Public Sub SetKaydet()
             st.Cells(yaz, ST_IHBAR).Value = HucreMetni(AyarMetni(pnl, k, SATIR_IHBAR))
             st.Cells(yaz, ST_YAZIM).Value = AyarMetni(pnl, k, SATIR_YAZIM)
             st.Cells(yaz, ST_SABITLER).Value = HucreMetni(SabitlerMetni(pnl, k))
+            st.Cells(yaz, ST_ANAHTAR).Value = HucreMetni(AyarMetni(pnl, k, SATIR_ANAHTAR))
+            st.Cells(yaz, ST_KIRILIM).Value = HucreMetni(AyarMetni(pnl, k, SATIR_KIRILIM))
+            st.Cells(yaz, ST_DONEM).Value = Ayar(pnl, k, SATIR_DONEM).Value
         End If
     Next k
 Cikis:
     If Err.Number <> 0 Then ad = ""
     EkranAc
     If ad = "" Then
-        MsgBox "Set kaydedilemedi (bir hata olustu). Setler sayfasini kontrol et.", vbCritical
+        Bildir BS_ENGEL, "Aktarim Paneli", "Set kaydedilemedi (bir hata olustu). Setler sayfasini kontrol et."
         Exit Sub
     End If
 
     OlayYaz "SET KAYDET", 0, 0, 0, "'" & ad & "' seti kaydedildi (" & kaydedilen & " panel)", ""
 
-    MsgBox "'" & ad & "' seti kaydedildi." & vbNewLine & _
+    Bildir BS_OK, "Aktarim Paneli", "'" & ad & "' seti kaydedildi." & vbNewLine & _
            kaydedilen & " panelin ayarlari (sabit degerler dahil) saklandi." & vbNewLine & vbNewLine & _
            "Kaynak dosya ve kaynak son satir sete dahil edilmedi;" & vbNewLine & _
-           "bunlari her ay yeniden secersin.", vbInformation
+           "bunlari her ay yeniden secersin."
 
 End Sub
 
@@ -1353,7 +1355,7 @@ Public Sub SetYukle()
 
     son = st.Cells(st.Rows.Count, ST_AD).End(xlUp).Row
     If son < 2 Then
-        MsgBox "Kayitli set yok. Once panelleri ayarlayip 'Set Kaydet' calistir.", vbExclamation
+        Bildir BS_DIKKAT, "Aktarim Paneli", "Kayitli set yok. Once panelleri ayarlayip 'Set Kaydet' calistir."
         Exit Sub
     End If
 
@@ -1370,7 +1372,7 @@ Public Sub SetYukle()
     Next i
 
     If setPanel = 0 Then
-        MsgBox "'" & ad & "' adinda bir set bulunamadi.", vbExclamation
+        Bildir BS_DIKKAT, "Aktarim Paneli", "'" & ad & "' adinda bir set bulunamadi."
         Exit Sub
     End If
 
@@ -1414,6 +1416,9 @@ Public Sub SetYukle()
                 Ayar(pnl, k, SATIR_HASAR).Value = HucreMetni(GuvenliMetin(st.Cells(i, ST_HASAR).Value))
                 Ayar(pnl, k, SATIR_IHBAR).Value = HucreMetni(GuvenliMetin(st.Cells(i, ST_IHBAR).Value))
                 Ayar(pnl, k, SATIR_YAZIM).Value = YazimMetni(YazimModuOku(st.Cells(i, ST_YAZIM).Value))
+                Ayar(pnl, k, SATIR_ANAHTAR).Value = HucreMetni(GuvenliMetin(st.Cells(i, ST_ANAHTAR).Value))
+                Ayar(pnl, k, SATIR_KIRILIM).Value = HucreMetni(GuvenliMetin(st.Cells(i, ST_KIRILIM).Value))
+                Ayar(pnl, k, SATIR_DONEM).Value = st.Cells(i, ST_DONEM).Value
 
                 ' --- Sabit degerler ---
                 sabitler = GuvenliMetin(st.Cells(i, ST_SABITLER).Value)
@@ -1445,19 +1450,19 @@ Public Sub SetYukle()
     OlayYaz "SET YUKLE", 0, 0, 0, "'" & ad & "' seti yuklendi (" & setPanel & " panele kadar)" & _
             IIf(atlanan <> "", "; " & MAX_BLOK & "'dan buyuk panel numaralari atlandi: " & atlanan, ""), ""
 
-    MsgBox "'" & ad & "' seti yuklendi." & vbNewLine & vbNewLine & _
+    Bildir BS_OK, "Aktarim Paneli", "'" & ad & "' seti yuklendi." & vbNewLine & vbNewLine & _
            IIf(atlanan <> "", "DIKKAT: panel " & atlanan & "en fazla " & MAX_BLOK & " panel siniri nedeniyle atlandi." & _
                vbNewLine & vbNewLine, "") & _
            "SIRADAKI ADIM:" & vbNewLine & _
            "Her panele o ayin kaynak dosyasini ve sayfasini sec," & vbNewLine & _
            "'YENILE' calistir. Eslestirmeler profilden otomatik gelir." & vbNewLine & _
-           "Sonra aktaracagin panellerde 'Bu paneli aktar' = Evet yap.", vbInformation
+           "Sonra aktaracagin panellerde 'Bu paneli aktar' = Evet yap."
     Exit Sub
 
 Hata:
     EkranAc
-    MsgBox "SET YUKLENEMEDI" & vbNewLine & vbNewLine & _
-           "Hata : " & Err.Number & " - " & Err.Description, vbCritical, "Set Yukle"
+    Bildir BS_ENGEL, "Set Yukle", "SET YUKLENEMEDI" & vbNewLine & vbNewLine & _
+           "Hata : " & Err.Number & " - " & Err.Description
 
 End Sub
 
@@ -1473,7 +1478,7 @@ Public Sub SetSil()
 
     son = st.Cells(st.Rows.Count, ST_AD).End(xlUp).Row
     If son < 2 Then
-        MsgBox "Kayitli set yok.", vbInformation
+        Bildir BS_BILGI, "Aktarim Paneli", "Kayitli set yok."
         Exit Sub
     End If
 
@@ -1489,7 +1494,7 @@ Public Sub SetSil()
 Cikis:
     EkranAc
     OlayYaz "SET SIL", 0, 0, 0, "'" & ad & "' seti silindi", ""
-    MsgBox "'" & ad & "' seti silindi.", vbInformation
+    Bildir BS_OK, "Aktarim Paneli", "'" & ad & "' seti silindi."
 
 End Sub
 
@@ -1558,8 +1563,15 @@ Public Sub SetSayfasiHazirla()
         st.Cells(1, ST_SABITLER).Value = "SABIT DEGERLER"
         st.Columns(ST_SABITLER).ColumnWidth = 40
     End If
+    If Trim$(GuvenliMetin(st.Cells(1, ST_ANAHTAR).Value)) = "" Then
+        st.Cells(1, ST_ANAHTAR).Value = "ANAHTAR SUTUN"
+        st.Cells(1, ST_KIRILIM).Value = "KIRILIM SUTUN"
+        st.Cells(1, ST_DONEM).Value = "DONEM SONU"
+        st.Range(st.Columns(ST_ANAHTAR), st.Columns(ST_DONEM)).ColumnWidth = 20
+        st.Columns(ST_DONEM).NumberFormat = "dd.mm.yyyy"
+    End If
 
-    With st.Range(st.Cells(1, 1), st.Cells(1, ST_SABITLER))
+    With st.Range(st.Cells(1, 1), st.Cells(1, ST_SON))
         .Font.Bold = True
         .Interior.Color = Palet(prTabloBaslik)
     End With

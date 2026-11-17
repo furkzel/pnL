@@ -63,7 +63,7 @@ Public Sub KilavuzKur()
     ws.Rows.Hidden = False
     ws.Cells.RowHeight = 15
     ws.Cells.Font.Name = PANEL_YAZI_TIPI
-    ws.Cells.Font.Size = 10
+    ws.Cells.Font.Size = YZ_GOVDE
     ws.Columns(1).ColumnWidth = 2
     ws.Columns(2).ColumnWidth = 4
     ws.Columns(K_METIN).ColumnWidth = 125
@@ -88,8 +88,8 @@ Public Sub KilavuzKur()
     Exit Sub
 
 Hata:
-    MsgBox "KILAVUZ KURULAMADI" & vbNewLine & vbNewLine & _
-           "Hata : " & Err.Number & " - " & Err.Description, vbExclamation, "Kilavuz"
+    Bildir BS_DIKKAT, "Kilavuz", "KILAVUZ KURULAMADI" & vbNewLine & vbNewLine & _
+           "Hata : " & Err.Number & " - " & Err.Description
 
 End Sub
 
@@ -130,7 +130,7 @@ Private Sub KBaslikAlani(ByVal ws As Worksheet)
 
     With ws.Cells(2, K_METIN)
         .Value = TR("AKTARIM PANEL#I  #-  KULLANIM KILAVUZU")
-        .Font.Size = 20
+        .Font.Size = YZ_BASLIK
         .Font.Bold = True
         .Font.Color = Palet(prMarka)
     End With
@@ -174,7 +174,7 @@ Private Sub KButon(ByVal ws As Worksheet, ByVal metin As String, ByVal makro As 
     With shp.TextFrame2
         .TextRange.Text = metin
         .TextRange.Font.Name = PANEL_YAZI_TIPI
-        .TextRange.Font.Size = 10
+        .TextRange.Font.Size = YZ_GOVDE
         .TextRange.Font.Bold = -1
         .TextRange.Font.Fill.ForeColor.RGB = Palet(prMarka)
         .TextRange.ParagraphFormat.Alignment = 2
@@ -205,7 +205,7 @@ Private Sub KBolum(ByVal no As Long, ByVal baslik As String)
         .Interior.Color = Palet(prMetin)
         .Font.Color = Palet(prZemin)
         .Font.Bold = True
-        .Font.Size = 12
+        .Font.Size = YZ_BASLIK
         .VerticalAlignment = xlCenter
     End With
     g_KWs.Cells(g_KSatir, K_METIN).Value = HucreMetni(no & ".  " & TR(baslik))
@@ -236,7 +236,7 @@ Private Sub KSatir(ByVal tur As String, ByVal metin As String)
         Case "A"
             h.Value = HucreMetni(metin)
             h.Font.Bold = True
-            h.Font.Size = 11
+            h.Font.Size = YZ_BOLUM
             h.Font.Color = Palet(prMarka)
         Case "M"
             h.Value = HucreMetni(ChrW(8226) & "  " & metin)
@@ -331,7 +331,7 @@ Private Sub KBaslikSekli(ByVal ws As Worksheet, ByVal n As Long, ByVal satir As 
     With shp.TextFrame2
         .TextRange.Text = ChrW(9654) & "    " & GuvenliMetin(ws.Cells(satir, K_METIN).Value)
         .TextRange.Font.Name = PANEL_YAZI_TIPI
-        .TextRange.Font.Size = 12
+        .TextRange.Font.Size = YZ_BASLIK
         .TextRange.Font.Bold = -1
         .TextRange.Font.Fill.ForeColor.RGB = Palet(prZemin)
         .TextRange.ParagraphFormat.Alignment = 1
@@ -568,6 +568,7 @@ Private Sub KBolumleriYaz()
     K12
     K13
     K14
+    K18
     K15
     K16
 End Sub
@@ -575,20 +576,19 @@ End Sub
 
 Private Sub K01()
     KBolum 1, "1 dakikada ba#sla"
-    KSatir "N", "1  Kaynak ve ana dosyay#i a#c#in, Panel se#cimlerini yap#ip Yenile'ye bas#in."
-    KSatir "N", "2  E#sle#stir'e bas#in; mor #onerileri kontrol edip onaylay#in."
-    KSatir "N", "3  #On Kontrol'u #cal#i#st#ir#in; ENGEL ve D#IKKAT maddelerini okuyun."
-    KSatir "N", "4  AKTAR ve onay ad#imlar#in#i tamamlay#in; iki dosyay#i da kaydedin."
+    KSatir "N", "1  Ayl#ik ve ana dosyay#i a#c#in; panelde dosya/sayfa se#cip 1 Yenile (Ctrl+Shift+1)."
+    KSatir "N", "2  2 E#sle#stir; mor #onerileri okuyup #cift t#iklay#in (onay)."
+    KSatir "N", "3  3 #On Kontrol: karne ve HAZIRLIK ye#sil / amber olana kadar k#irm#iz#i maddeleri giderin."
+    KSatir "N", "4  4 AKTAR; onay ekran#in#i okuyun; #once ana dosyay#i, sonra bu dosyay#i kaydedin."
+    KSatir "I", "#IPUCU: Mavi dolgulu buton s#iradaki ad#imd#ir. " & ChrW(10003) & " biten ad#im, soluk olan hen#uz s#iras#i gelmemi#s ad#imd#ir. ENGEL varken AKTAR soluk kal#ir."
+    KSatir "A", "Ekran#i 3 saniyede okumak"
+    KSatir "M", "Renk tek anlam ta#s#ir: YE#S#IL = ge#cti, AMBER = okuyup onaylay#in (D#IKKAT), KIRMIZI = aktar#im yap#ilamaz (ENGEL), MOR = onay bekleyen #oneri, MAV#I = s#iradaki ad#im."
+    KSatir "M", "Karne ba#sl#i#g#indaki rozet: ""11 " & ChrW(10003) & " #* 2 ! #* 0 " & ChrW(10005) & """. Alt#indaki sat#ir veri kalitesi skorudur (0#-100)."
+    KSatir "M", "Bildirim #seridi (HAZIRLIK'#in sa#g#i) son mesaj#i g#osterir; t#iklay#inca son 5 mesaj, bir t#iklama daha Rapor'daki kayd#i a#car. Karar gerektirmeyen hi#cbir mesaj ekran#i kilitlemez."
     KSatir "A", "Bu ara#c ne yapar?"
-    KSatir "P", "Kapan#i#s d#oneminde her ay gelen hasar dosyalar#i (#odenen, muallak ...) birikimli ""ana dosya""lara eklenir. Ayl#ik dosyalarla ana dosyan#in s#utun adlar#i ve s#iralar#i birebir tutmaz; bu ara#c her ayl#ik s#utunu ana dosyadaki do#gru s#utuna E#SLEYEREK kopyalar."
-    KSatir "M", "S#utunlar#i ad#iyla e#sle#stirir (birebir ad, benzer ad, #o#grenilmi#s eski adlar)."
-    KSatir "M", "Aktarmadan #once her #seyi denetler: eksik s#utun, ayn#i hedefe iki kaynak, veri tipi uyu#smazl#i#g#i, bo#s kalacak zorunlu (ye#sil) s#utun, alttaki toplam sat#ir#i, tarih sorunlar#i."
-    KSatir "M", "Yazd#i#g#i her #seyi Ge#cmi#s'e i#sler; Geri Al ile tek t#iklamayla ve g#uvenle geri al#inir."
-    KSatir "M", "Aktar#ilan tutar#in ana dosyaya eksiksiz yaz#ild#i#g#in#i mutabakatla kan#itlar."
-    KSatir "A", "Ne yapmaz?"
-    KSatir "M", "Ana dosyadaki veriyi analiz etmez, #ozet / pivot / grafik #uretmez (v33'teki #Ozet sayfalar#i v34'te kald#ir#ild#i)."
+    KSatir "P", "Kapan#i#s d#oneminde her ay gelen hasar dosyalar#i (#odenen, muallak ...) birikimli ""ana dosya""lara eklenir. Ara#c her ayl#ik s#utunu ana dosyadaki do#gru s#utuna E#SLEYEREK kopyalar, #once 14 akt#uerya kontrol noktas#indan ge#cirir, yazd#iktan sonra tutar, adet ve k#ir#il#im mutabakat#iyla kan#itlar, her #seyi geri al#inabilir #sekilde kaydeder."
+    KSatir "M", "Analiz sayfas#i aktar#ilacak ya da aktar#ilm#i#s veriyi boyut, #ol#c#u ve filtreyle #ozetler (b#ol#um 15)."
     KSatir "M", "Kontrol i#cin ana dosyaya filtre ya da ge#cici s#utun yazmaz; t#um kontroller aktar#imdan #ONCE ve kaynak #uzerinde yap#il#ir."
-    KSatir "M", "Kay#itlar#i poli#ce/hasar numaras#ina g#ore kar#s#ila#st#irmaz (m#ukerrer uyar#is#i dosya d#uzeyindedir)."
 End Sub
 
 
@@ -611,28 +611,27 @@ End Sub
 
 Private Sub K03()
     KBolum 3, "Panel ekran#in#i tan#iyal#im"
-    KSatir "A", "#Ust #serit: d#ort ad#im"
-    KSatir "P", "Panel, set, profil, #oneri, yama ve yard#im komutlar#i Di#ger men#us#undedir. Geri Al ayr#i, k#irm#iz#i #cer#cevelidir."
-    KSatir "P", "NUMARALI d#ort buton yolu g#osterir: 1 YEN#ILE  #>  2 Otomatik E#sle#stir  #>  3 #On Kontrol  #>  4 AKTAR."
-    KSatir "T", "1 #* HAZIRLA | YEN#ILE (dosyalar#i, sayfalar#i, s#utunlar#i okur), + Panel / " & ChrW(8722) & " Panel, Set Y#ukle / Kaydet, k#u#c#uk Set Sil."
-    KSatir "T", "2 #* E#SLE#ST#IR & DO#GRULA | Otomatik E#sle#stir, #On Kontrol (hi#cbir #sey yazmadan aktar#im#i dener), #Oneri Onayla (ak#ill#i: se#cili sat#irlarda #oneri varsa onlar#i, yoksa paneldeki hepsini), Profil Kaydet."
-    KSatir "T", "3 #* AKTAR & GER#I AL | AKTAR (se#cili panelleri s#irayla), Se#cili S#utun Yamas#i, Geri Al, Tutar Mutabakat#i."
-    KSatir "T", "PANEL #* YARDIM | " & ChrW(9664) & " " & ChrW(9654) & " paneller aras#inda gezinir; ortadaki g#osterge ""AKT#IF"" paneli g#osterir (butonlar hep bu panel i#cin #cal#i#s#ir). K#ILAVUZ, Tan#i."
-    KSatir "T", "#Seritte olmayanlar | Alt+F8 ile: ProfilSil, MenuleriTazele (zaten otomatik), IsaretleriTemizle (SE#C i#saretlerini siler), ButonlariYenile, PaneliYenidenKur."
+    KSatir "A", "#Ust #serit"
+    KSatir "T", "Birincil | 1 Yenile  #>  2 E#sle#stir  #>  3 #On Kontrol  #>  4 AKTAR. Yaln#iz S#IRADAK#I ad#im mavi dolguludur; bitenlerde " & ChrW(10003) & " vard#ir. K#isayol: Ctrl+Shift+1 ... 4 (yaln#iz bu kitap etkinken)."
+    KSatir "T", "#Ikincil | Analiz, Denetim, Di#ger " & ChrW(9662) & " (+ Panel, Panel kald#ir, #Onceki/Sonraki panel, Set y#ukle/kaydet/sil, #Oneri onayla, Profil kaydet, Se#cili s#utun yamas#i, Tutar mutabakat#i, Ayarlar, K#ilavuz, Tan#i)."
+    KSatir "T", "Geri Al | Ayr#i grupta, en sa#gda, k#irm#iz#i #cer#cevelidir; iki a#samal#i onay korunur."
+    KSatir "T", "HAZIRLIK | ""2 / 3 panel haz#ir #* 1 d#ikkatli"": aktar#ima dahil panellerin #ozeti; t#iklay#inca panel panel tablo."
+    KSatir "T", "Bildirim #seridi | Son mesaj (" & ChrW(10003) & " / ! / " & ChrW(10005) & "); t#iklay#inca son 5 mesaj."
     KSatir "A", "#Cift t#iklama k#isayollar#i"
     KSatir "M", "Mor #ONER#I h#ucresine #cift t#iklay#in: #oneri hemen onaylan#ir."
     KSatir "M", "#I#SLEM h#ucresine #cift t#iklay#in: SE#C a#c#il#ir / kapan#ir (FORM#UL i#saretine dokunmaz)."
     KSatir "M", """Bu paneli aktar"" de#gerine #cift t#iklay#in: Evet / Hay#ir de#gi#sir, renk hemen d#oner."
     KSatir "M", "HEDEF HAR#ITASI'nda dolmayan bir s#utuna (#ozellikle k#irm#iz#i ""<< YES#IL, BO#STA"") #cift t#iklay#in: s#utun SAB#IT DE#GERLER'e eklenir ve DE#GER h#ucresine gidilir; yaln#izca de#geri yazars#in#iz."
     KSatir "A", "KONTROL NOKTALARI karnesi ve HAZIRLIK g#ostergesi"
-    KSatir "P", "Her panelin sa#g #ust k#o#sesindeki kart, 8 akt#uerya kontrol noktas#in#in (K1#-K8, b#ol#um 9) durumunu g#osterir: " & ChrW(10003) & " ge#cti, ! D#IKKAT, " & ChrW(10005) & " ENGEL, " & ChrW(9675) & " #On Kontrol bekliyor, #- uygulanmaz. K1, K4, K5 YEN#ILE ve e#sle#stirmede canl#i g#uncellenir; t#um#u 3 #On Kontrol ve 4 AKTAR ile dolar. Alt sat#ir son kontrol#un ne zaman ve neyle yap#ild#i#g#in#i yazar."
-    KSatir "P", "#Seritteki HAZIRLIK g#ostergesi aktar#ima dahil (Evet) panellerin kartlar#in#i #ozetler: ye#sil = 4 AKTAR'a haz#ir, turuncu = kontrol bekleyen ya da D#IKKAT'li panel var, k#irm#iz#i = ENGEL. T#iklay#inca panel panel tablo a#c#il#ir."
+    KSatir "P", "Her panelin sa#g #ust k#o#sesindeki kart, 14 akt#uerya kontrol noktas#in#in (K1#-K14, b#ol#um 9) durumunu g#osterir: " & ChrW(10003) & " ge#cti, ! D#IKKAT, " & ChrW(10005) & " ENGEL, " & ChrW(9675) & " #On Kontrol bekliyor, #- uygulanmaz. K1, K4, K5 YEN#ILE ve e#sle#stirmede canl#i g#uncellenir; t#um#u 3 #On Kontrol ve 4 AKTAR ile dolar. Alt sat#ir son kontrol#un ne zaman ve neyle yap#ild#i#g#in#i yazar."
+    KSatir "P", "#Seritteki HAZIRLIK g#ostergesi aktar#ima dahil (Evet) panellerin kartlar#in#i #ozetler: ye#sil = 4 AKTAR'a haz#ir, amber = #On Kontrol bekleyen ya da D#IKKAT'li panel var, k#irm#iz#i = ENGEL. T#iklay#inca panel panel tablo a#c#il#ir."
     KSatir "I", "#IPUCU: #Serit dondurulmu#stur; a#sa#g#i kayd#ir#inca kaybolmaz. Sa#ga kayd#ir#inca bir h#ucreye t#iklay#in, butonlar ekran#in soluna gelir."
     KSatir "A", "Panel blo#gu (her ayl#ik dosya i#cin bir blok, en fazla 10)"
-    KSatir "T", "Bu paneli aktar | Evet olan paneller AKTAR'da s#irayla aktar#il#ir (ye#sil = Evet)."
+    KSatir "T", "Bu paneli aktar | Evet (" & ChrW(9679) & ") olan paneller AKTAR'da s#irayla aktar#il#ir; Hay#ir (" & ChrW(9675) & ") paneller soluk g#or#un#ur ve alarm vermez."
     KSatir "T", "KAYNAK | Ayl#ik dosya, sayfa ve son sat#ir (bo#s = otomatik; alttaki toplam sat#ir#in#i d#i#sar#ida b#irakmak i#cin elle yaz#ilabilir)."
     KSatir "T", "HEDEF | Ana dosya, sayfa ve yaz#im ba#slang#ic#i (normal ayda ""Sayfan#in en alt#i"")."
     KSatir "T", "E#SLE#ST#IRME #* KONTROL | Profil, tutar s#utunu (mutabakat i#cin), hasar ve ihbar tarihi s#utunlar#i (tarih kontrol#u i#cin). Bo#ssa YEN#ILE ana dosyada TEK ve a#c#ik bir aday bulursa (TUTAR / HASAR+TAR#IH / #IHBAR+TAR#IH) kendisi se#cer; dolu de#gere dokunmaz, DURUM'da ""OTOMAT#IK SE#C#ILD#I"" yazar."
+    KSatir "T", "v1.1 ayarlar#i | Anahtar s#utunu (hasar/dosya no, K9), K#ir#il#im s#utunu (bran#s/#sirket, K12 ve K13), Rapor d#onemi sonu (K10; bo#s = ge#cen ay sonu). Hasar no ve bran#s ad#i tek ve a#c#iksa YEN#ILE kendisi se#cer."
     KSatir "T", "SAB#IT DE#GERLER | Ayl#ik dosyada olmayan sabit bilgiler (RAPOR_DONEMI = 2026-09, KAYNAK = AXA ...)."
     KSatir "T", "DURUM | Panelin tek sat#irl#ik #ozeti: ka#c s#utun e#sle#sti, onay bekleyen #oneri, bo#s kalan ye#sil s#utun, tip uyu#smazl#i#g#i, profil notlar#i."
     KSatir "A", "E#sle#stirme tablosu (6 s#utun; yazd#i#g#in#iz s#utunlar yan yana, salt okunur harita en sa#gda)"
@@ -812,17 +811,39 @@ End Sub
 
 
 Private Sub K17()
-    KBolum 9, "Akt#uerya kontrol noktalar#i (K1#-K8)"
-    KSatir "P", "Her aktar#im #once bu 8 noktadan ge#cer. Her D#IKKAT / ENGEL maddesi [Kn] etiketiyle g#osterilir, panel karnesine i#slenir ve Rapor'da kendi sat#ir#ina yaz#il#ir. Veri kalitesi yakla#s#im#i ASOP 23 (Data Quality) ile uyumludur: veri kullan#ilmadan #once uygunluk, tutarl#il#ik ve tamal#ik denetlenir, s#in#irl#il#iklar belgelenir."
-    KSatir "T", "K1  Dosya, ba#sl#ik & hedef | Dosya/sayfa eri#simi, salt okunur kilit, ba#sl#ik yeri ve ad#i, iki kaynak ayn#i hedefe, onaylanmam#i#s #oneri, hedef aral#ik (yama, geri al#inan aral#ik, sat#ir s#in#ir#i)."
-    KSatir "T", "K2  M#ukerrer aktar#im | Ayn#i ayl#ik dosya bu ana dosyada zaten etkin mi (AKTAR'da soru, #On Kontrol'de D#IKKAT)."
-    KSatir "T", "K3  Son sat#ir & kuyruk | S#utunlar#in #co#gunlu#gunun bitti#gi sat#ir ve bo#s sat#irla ayr#ilm#i#s alt b#ol#um (genel toplam); i#ceri#gi #onizlenir."
-    KSatir "T", "K4  Zorunlu (ye#sil) s#utun | E#sle#smeyen ye#sil s#utun ve e#sle#smi#s ye#sil s#utunda bo#s h#ucre (#ornek sat#irlarla)."
-    KSatir "T", "K5  Veri tipi & sabit de#ger | Kaynak #> hedef tip #catismas#i ve sabit de#gerin hedef s#utun tipiyle uyumu."
-    KSatir "T", "K6  Bi#cim & kod korumas#i | Ba#staki s#if#ir, 16+ haneli numara, form#ul gibi metin, ########## tarih ta#smas#i, form#ul ta#s#ima."
-    KSatir "T", "K7  Tutar & mutabakat | Tutar s#utununda say#i olmayan / bo#s / eksi de#ger ve aktar#im sonras#i 4'l#u mutabakat (kaynak, yaz#ilan, hedef #onceki / yeni). FARK varsa K7 ENGEL olur."
-    KSatir "T", "K8  Hasar / ihbar tarihi | #Ihbar < hasar, bo#s tarih, tarihe #cevrilemeyen de#ger, metin tarih."
-    KSatir "I", "#IPUCU: Y#oneticiye g#ostermek i#cin: Denetim sayfas#i (KPI kartlar#i ve K1#-K8 istatisti#gi) ve Rapor'daki KONTROL NOKTASI s#utunu."
+    KBolum 9, "Akt#uerya kontrol noktalar#i (K1#-K14) ve veri kalitesi"
+    KSatir "P", "Her aktar#im #once bu 14 noktadan ge#cer. Her D#IKKAT / ENGEL maddesi [Kn] etiketiyle Rapor'da kendi sat#ir#ina yaz#il#ir, karneye ve Denetim'e i#slenir. Yakla#s#im ASOP 23 (Data Quality) ile uyumludur; uyum beyan#i de#gil, kan#it deste#gidir."
+    KSatir "T", "K1  Dosya, ba#sl#ik & hedef | Eri#sim, salt okunur, ana dosya kilidi (ba#ska kullan#ic#i yaz#iyor), ba#sl#ik yeri, iki kaynak ayn#i hedefe, onaylanmam#i#s #oneri, hedef aral#ik."
+    KSatir "T", "K2  M#ukerrer aktar#im | Ayn#i dosya ad#i VEYA ayn#i i#cerik izi (sat#ir + tutar + anahtar CRC) bu ana dosyada etkin mi; dosya yeniden adland#ir#ilsa da yakalan#ir."
+    KSatir "T", "K3  Son sat#ir & kuyruk | #Co#gunluk sat#ir#i ve bo#s sat#irla ayr#ilm#i#s toplam b#ol#um#u; i#ceri#gi #onizlenir."
+    KSatir "T", "K4  Zorunlu s#utun | E#sle#smeyen zorunlu s#utun ve zorunlu s#utunda bo#s h#ucre (doluluk %). Zorunluluk Ayarlar'daki listeden, yoksa ye#sil ba#sl#iktan okunur."
+    KSatir "T", "K5  Veri tipi & sabit de#ger | Tip #celi#skisi; tip tahmini ba#s, orta, son ve rastgele pencerelerden (tabakal#i #ornek)."
+    KSatir "T", "K6  Bi#cim & kod korumas#i | Ba#staki s#if#ir, 16+ hane, form#ul gibi metin, ##### ta#smas#i, 2'den fazla ondal#ik hane."
+    KSatir "T", "K7  Tutar & mutabakat | Ana tutar 4'l#u (kaynak = yaz#ilan, hedef de#gi#simi = yaz#ilan #- #uzerine yaz#ilan) + say#isal e#slenen s#utunlar (en fazla 8) + ADET (sat#ir ve say#isal h#ucre). Currency ile kesin; fark ENGEL."
+    KSatir "T", "K8  Hasar / ihbar tarihi | #Ihbar < hasar, bo#s, bozuk, metin tarih."
+    KSatir "T", "K9  Anahtar tekilli#gi | Anahtar (+tutar +hasar tarihi) tekrar#i D#IKKAT; t#um s#utunlar#i ayn#i sat#ir ENGEL (Ayarlar'dan D#IKKAT'e al#inabilir); #ornek ana dosyan#in son sat#irlar#inda aran#ir."
+    KSatir "T", "K10 D#onem tutarl#il#i#g#i | D#onem sonundan sonraki tarih; makul aral#ik (1990 #- d#onem sonu + 12 ay) d#i#s#i tarih (tarih s#utununa girmi#s tutar gibi)."
+    KSatir "T", "K11 Makull#uk | Ayn#i hedefe son 12 ay#a g#ore sat#ir ve tutar z-skoru (|z| > 3), b#uy#uk hasar listesi, Benford ilk hane sapmas#i (MAD > 0,015)."
+    KSatir "T", "K12 #Sema & kod kaymas#i | Profil ve son aktar#ima g#ore yeni/kaybolan s#utun; k#ir#il#imda ana dosyada hi#c g#or#ulmemi#s ya da bu ay kaybolan kod."
+    KSatir "T", "K13 Katmanl#i mutabakat | K#ir#il#im (bran#s) bazl#i adet ve tutar: yazd#iktan sonra ana dosyadan geri okunur, kaynakla kar#s#ila#st#ir#il#ir; fark ENGEL."
+    KSatir "T", "K14 Kaynak b#ut#unl#u#g#u & soy | #On Kontrol'den sonra kaynak de#gi#stiyse AKTAR ENGEL (yeniden #On Kontrol); kaydedilmemi#s kaynak D#IKKAT; dosya yolu, boyut, zaman ve izler Rapor'a yaz#il#ir."
+    KSatir "A", "Veri kalitesi skoru (0#-100)"
+    KSatir "P", "Taml#ik %30 (zorunlu ve kritik s#utunlarda dolu oran#i), ge#cerlilik %25 (say#i ve tarih ge#cerli oran#i), tekillik %20 (K9), makull#uk %15 (K11 z-skoru), mutabakat %10 (yaln#iz AKTAR). Uygulanamayan bile#senin a#g#irl#i#g#i di#gerlerine payla#st#ir#il#ir. Hedef Ayarlar'da (varsay#ilan 95)."
+    KSatir "I", "#IPUCU: Denetim sayfas#i K1#-K14 i#cin adet ve ""bulgu / #cal#i#st#irma"" oran#in#i, s#ure#c metriklerini (ilk ge#ci#s verimi, ge#cersiz k#ilma, geri alma oran#i) ve varsay#ilandan farkl#i e#sikleri g#osterir."
+End Sub
+
+
+Private Sub K18()
+    KBolum 15, "Analiz sayfas#i ve Ayarlar"
+    KSatir "P", "Analiz, se#cilen kayna#g#in (panelin ayl#ik dosyas#i, ana dosyas#i ya da son partisi) YALNIZ istenen s#utunlar#in#i okur, gruplar, tablo + grafik + 3 maddelik yorum yazar."
+    KSatir "T", "#Istek kart#i | #Sablon, Kaynak, Sat#ir boyutu, S#utun boyutu (iste#ge ba#gl#i, pivot), #Ol#c#u (Adet, Toplam, Ortalama, Min, Maks, Tekil, P50, P95), #Ol#c#u s#utunu, Filtre (Panel ile ayn#i s#oz dizimi), D#onem s#utunu ve aral#i#g#i."
+    KSatir "T", "Haz#ir #sablonlar | A1 veri profili #* A2 ay-ay (z-skor) #* A3 k#ir#il#im x #sirket #* A4 hasar geli#sim #u#cgeni ve zincir merdiven fakt#orleri #* A5 ihbar gecikmesi #* A6 b#uy#uk hasar Top-20 #* A7 aktar#im etkisi #* A8 kontrol noktas#i trendi #* A9 frekans / #siddet ayr#i#s#im#i."
+    KSatir "M", "#Sablon se#cmek kart#i panel ayarlar#indan doldurur (tutar, hasar tarihi, k#ir#il#im); de#gi#stirip #Sablon kaydet ile kendi #sablonunuzu saklay#in."
+    KSatir "M", "Tarih tipli boyut ay ay (yyyy-aa) gruplan#ir. #Cok fazla farkl#i de#gerde (Ayarlar: ANALIZ_GRUP) s#iralama tabanl#i gruplamaya ge#cilir."
+    KSatir "D", "A4 bir veri kontrol arac#id#ir; kuyruk fakt#or#u varsay#ilmaz, rezerv tahmini akt#uerin yarg#is#in#i gerektirir."
+    KSatir "A", "Ayarlar sayfas#i"
+    KSatir "M", "T#um e#sikler (z-skor, b#uy#uk hasar, makul tarih aral#i#g#i, Benford, yedek saklama, kilit s#uresi, mutabakat tolerans#i ...) DE#GER s#utununda d#uzenlenir; bo#s = varsay#ilan. Farkl#i olanlar Denetim'de listelenir."
+    KSatir "M", "ZORUNLU S#UTUNLAR: bir ana dosya sayfas#i i#cin s#utun ba#sl#iklar#i girilirse zorunluluk renge de#gil bu listeye g#ore belirlenir."
 End Sub
 
 
@@ -832,13 +853,14 @@ Private Sub K15()
     KSatir "N", "2)  Ge#cmi#s, Rapor ve Profiller sayfalar#in#i elle d#uzenlemeyin."
     KSatir "N", "3)  Normal ayl#ik aktar#imda yaz#im ba#slang#ic#i ""Sayfan#in en alt#i"" olmal#id#ir."
     KSatir "N", "4)  Onay ekran#in#i okumadan ""Evet"" demeyin. D#IKKAT maddeleri aktar#im#i durdurmaz; siz durdurursunuz."
-    KSatir "N", "5)  Ana dosya ba#ska birinde a#c#ikken aktar#im yapmay#in."
+    KSatir "N", "5)  Ana dosya kilitliyse (ba#ska kullan#ic#i yaz#iyor) bekleyin; kilit bayatsa (Ayarlar: KILIT_DAKIKA) kendili#ginden d#u#ser."
     KSatir "A", "S#in#irl#il#iklar"
     KSatir "M", "Ba#sl#iklar 1. sat#irda, veri 2. sat#irdan itibaren olmal#id#ir."
     KSatir "M", "En fazla 10 panel, panel ba#s#ina 300 s#utun ve 15 sabit de#ger."
-    KSatir "M", "Veri tipi tahmini ilk/son 300 sat#ira, filtre men#us#u ilk 10.000 sat#ira bakar (filtre yine b#ut#un sat#irlara uygulan#ir)."
-    KSatir "M", "Ye#sil s#utun tespiti renk tonuna bakar (G > R+12 ve G > B+12)."
-    KSatir "M", "Ayn#i anda tek ki#si #cal#i#smal#id#ir; kilitleme yoktur. Excel'in Ctrl+Z'si makrodan sonra #cal#i#smaz (Geri Al kullan#in)."
+    KSatir "M", "Veri tipi tahmini 400 sat#irl#ik tabakal#i #orne#ge (ba#s, orta, son, rastgele), filtre men#us#u ilk 10.000 sat#ira bakar (filtre yine b#ut#un sat#irlara uygulan#ir)."
+    KSatir "M", "Zorunlu s#utun Ayarlar'daki listeden; liste yoksa ye#sil ba#sl#ik renginden (G > R+12 ve G > B+12) okunur."
+    KSatir "M", "Ana dosya kilidi ayn#i klas#ore yaz#ilan "".aplock"" dosyas#id#ir; bulut (https) yollar#inda kurulamaz, aktar#im yine yap#il#ir ve Rapor'a not d#u#s#ul#ur. Excel'in Ctrl+Z'si makrodan sonra #cal#i#smaz (Geri Al kullan#in)."
+    KSatir "M", "K14 kaynak izi anahtar, tutar, tarih ve k#ir#il#im s#utunlar#in#in tam CRC32'sidir; di#ger s#utunlardaki de#gi#siklik bu izde yakalanmaz (geri alma parmak izi ise yaz#ilan B#UT#UN s#utunlar#i kapsar)."
     KSatir "M", "Rapor resmi bir denetim kayd#i de#gil, #cal#i#sma tutana#g#id#ir."
 End Sub
 
@@ -855,10 +877,16 @@ Private Sub K16()
     KSatir "K", "M07_Kayit       Geri Al, Ge#cmi#s, Rapor, yedek, parmak izi"
     KSatir "K", "M08_Kurulum     SifirdanKur, PaneliYenidenKur, v33 ge#ci#si, Tan#i"
     KSatir "K", "M09_Kilavuz     bu k#ilavuz ve Geli#stirici sayfas#i"
-    KSatir "K", "M10_Denetim     K1#-K8 adlar#i, kontrol karnesi, HAZIRLIK, Denetim sayfas#i"
+    KSatir "K", "M10_Denetim     K1#-K14 adlar#i, kontrol karnesi, HAZIRLIK, Denetim sayfas#i"
+    KSatir "K", "M11_Analiz      Analiz sayfas#i, gruplama, #sablonlar A1#-A9"
+    KSatir "K", "M12_Butunluk    h#izl#i CRC32 parmak izi (16 bit tablo)"
+    KSatir "K", "M13_Koruma      sayfa korumalar#i, bask#i ayarlar#i"
+    KSatir "K", "M14_Filtre      ortak filtre motoru (Panel + Analiz)"
+    KSatir "K", "M15_Esik        Ayarlar sayfas#i, e#sikler, zorunlu s#utun meta verisi"
+    KSatir "K", "M16_Bellek      durum belle#gi, bildirim #seridi, ana dosya kilidi"
     KSatir "K", "Sozluk (s#in#if)  Scripting.Dictionary yerine yerel s#ozl#uk"
     KSatir "A", "Kurallar"
-    KSatir "M", "Kod ve MsgBox metinleri ASCII. H#ucreye T#urk#ce harf gerekiyorsa TR(""#s#i"") kullan#il#ir."
+    KSatir "M", "Kod ve MsgBox metinleri ASCII. H#ucreye T#urk#ce harf gerekiyorsa TR(""#s#i"") kullan#il#ir. Renk yaln#iz Palet(), yaz#i boyu yaln#iz YZ_* sabitleri; MsgBox en fazla 30 (bilgi = Bildir)."
     KSatir "M", "Kar#s#ila#st#irmada UCase/LCase de#gil BH() / Normalize()."
     KSatir "M", "Yerle#sim de#gi#sikli#gi yaln#izca M01_Ayarlar'daki sabitlerden yap#il#ir."
     KSatir "M", "Her giri#s makrosu EkranKilitle / EkranAc #cifti ile #cal#i#s#ir; hata yolunda da EkranAc #ca#gr#il#ir."
@@ -922,7 +950,7 @@ Public Sub GelistiriciGuncelle()
     ws.Columns(1).ColumnWidth = 150
     ws.Columns(1).NumberFormat = "@"
     ws.Columns(1).Font.Name = "Consolas"
-    ws.Columns(1).Font.Size = 10
+    ws.Columns(1).Font.Size = YZ_GOVDE
 
     ReDim dizi(1 To g_GSay, 1 To 1)
     For i = 1 To g_GSay
@@ -937,8 +965,8 @@ Public Sub GelistiriciGuncelle()
     Exit Sub
 
 Hata:
-    MsgBox "GELISTIRICI SAYFASI GUNCELLENEMEDI" & vbNewLine & vbNewLine & _
-           "Hata : " & Err.Number & " - " & Err.Description, vbExclamation, "Gelistirici"
+    Bildir BS_DIKKAT, "Gelistirici", "GELISTIRICI SAYFASI GUNCELLENEMEDI" & vbNewLine & vbNewLine & _
+           "Hata : " & Err.Number & " - " & Err.Description
 
 End Sub
 
@@ -1048,16 +1076,16 @@ Private Sub GP02()
     GMetin "4. PANEL YERLE#S#IM#I (M01_Ayarlar)"
     GMetin "Yan yana en fazla 10 blok, her biri 6 s#utun (BLOK_GENISLIK)."
     GMetin "Sat#ir 1-5 #serit (dondurulmu#s), 7 blok ba#sl#i#g#i ""PANEL k - dosya / sayfa"","
-    GMetin "8-21 ayarlar (etiket c, de#ger c+2), 8-24 SAB#IT kutusu (c+3 s#utun, c+4"
+    GMetin "8-24 ayarlar (etiket c, de#ger c+2; 22-24 v1.1), 8-24 SAB#IT kutusu (c+3 s#utun, c+4"
     GMetin "de#ger), 26 DURUM, 28 tablo ba#sl#i#g#i, 29-530 tablo:"
     GMetin "c KAYNAK | c+1 VER#I T#IP#I | c+2 HEDEF | c+3 F#ILTRE | c+4 #I#SLEM | c+5 HAR#ITA."
-    GMetin "Sat#ir 8-17, c+5: KONTROL NOKTALARI karnesi (K1..K8). Etiketler c..c+1 birle#sik."
+    GMetin "Sat#ir 8-24, c+5: karne (8 rozet, 9-22 K1..K14, 23 kalite, 24 not). Etiketler c..c+1 birle#sik."
     GMetin "Kontrol noktas#i: M06'da her madde KEkle p, n, engelMi, metin ile ""[Kn] ..."" olarak"
     GMetin "eklenir ve p.kDurum(n) y#ukselir (- < YOK < OK < D#IKKAT < ENGEL); KTamam/KYok"
     GMetin "a#samalar bitince i#saretler. Rapor R_KONTROL s#utununa ""Kn SEV#IYE"" yaz#il#ir."
     GMetin "H#ucre de#gerleri ""F - SUTUN ADI"" bi#cimindedir (SutunNo/SutunAdi)."
     GMetin "Kald#ir#ilan blok silinmez, gizlenir (numaralar ve setler bozulmas#in)."
-    GMetin "Panel d#uzeni ad#i: AP_DUZEN = ""v1.0"" (eski ad ""v35"" ayn#i d#uzen). ""v34"" (harita ortada) ve ad#i olmayan v33"
+    GMetin "Panel d#uzeni ad#i: AP_DUZEN = ""v1.1"". ""v1.0""/""v35"" ayn#i tablo d#uzeni, ""v34"" (harita ortada) ve ad#i olmayan v33"
     GMetin "panelleri SifirdanKur / PaneliYenidenKur i#cerik korunarak ta#s#ir (M08.BlokOku)."
     GMetin ""
     GMetin "5. AKTARIM MOTORU (M06)"

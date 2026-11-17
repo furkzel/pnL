@@ -22,8 +22,25 @@ def check_ascii(src=SRC):
     return problems
 
 
+MSGBOX_LIMIT = 30   # UX-01: decisions and data-safety alerts only; the rest goes to Bildir
+
+
+def count_msgbox(src=SRC):
+    n = 0
+    for path in sorted(src.glob('*')):
+        if path.suffix.lower() not in ('.bas', '.cls'):
+            continue
+        for line in path.read_text(encoding='ascii', errors='replace').splitlines():
+            code = code_only(line)
+            if re.search(r'\bMsgBox\b', code) and 'VbMsgBoxResult' not in code:
+                n += 1
+    return n
+
+
 def check_sources(src=SRC, *, palette=True):
     problems = check_ascii(src)
+    if palette and count_msgbox(src) > MSGBOX_LIMIT:
+        problems.append(f'{count_msgbox(src)} MsgBox calls > {MSGBOX_LIMIT} (use Bildir for information)')
     for path in sorted(src.glob('*')):
         if path.suffix.lower() not in ('.bas', '.cls'):
             continue
@@ -37,6 +54,8 @@ def check_sources(src=SRC, *, palette=True):
         for n, line in enumerate(code, 1):
             if palette and path.name != 'M01_Ayarlar.bas' and re.search(r'\bRGB\s*\(', line, re.I):
                 problems.append(f'{path.name}:{n}: RGB literal outside palette')
+            if path.name != 'M01_Ayarlar.bas' and re.search(r'\bFont\.Size\s*=\s*[\d.]', line, re.I):
+                problems.append(f'{path.name}:{n}: literal font size (use YZ_* scale constants)')
             if re.search(r'\bApplication\.Transpose\b|\bCreateObject\s*\(', line, re.I):
                 problems.append(f'{path.name}:{n}: forbidden runtime dependency/Transpose')
             if re.search(r'\.Cells\.Clear\s*$', line, re.I):
@@ -58,6 +77,24 @@ def check_sources(src=SRC, *, palette=True):
     return problems
 
 
+# Every text/background combination the UI draws (cells, shapes, chart labels).
+CONTRAST_PAIRS = [
+    ('prMetin', 'prZemin'), ('prMetin', 'prYuzey'), ('prMetin', 'prTabloBaslik'),
+    ('prIkincilMetin', 'prZemin'), ('prIkincilMetin', 'prYuzey'), ('prIkincilMetin', 'prTabloBaslik'),
+    ('prPasifMetin', 'prZemin'), ('prPasifMetin', 'prYuzey'),
+    ('prMarka', 'prZemin'), ('prMarka', 'prYuzey'), ('prZemin', 'prMarka'), ('prZemin', 'prMetin'),
+    ('prOk', 'prZemin'), ('prOk', 'prOkZemin'),
+    ('prDikkat', 'prZemin'), ('prDikkat', 'prDikkatZemin'),
+    ('prEngel', 'prZemin'), ('prEngel', 'prEngelZemin'),
+    ('prOneriMetin', 'prZemin'), ('prOneriMetin', 'prOneriZemin'),
+    ('prMetin', 'prOkZemin'), ('prMetin', 'prDikkatZemin'), ('prMetin', 'prEngelZemin'),
+    ('prMetin', 'prOneriZemin'), ('prMetin', 'prMarkaZemin'),
+    ('prZemin', 'prButonAna'), ('prZemin', 'prButonYesil'), ('prZemin', 'prButonKirmizi'),
+    ('prSeritYazi', 'prSeritZemin'), ('prZemin', 'prBlokBaslik'), ('prZemin', 'prBlokBaslikAktif'),
+    ('prTipUyusmazYazi', 'prTipUyusmaz'),
+]
+
+
 def check_contrast(src=SRC):
     """WCAG normal-text contrast for the semantic pairs used by status UI.
     This verifies declared pairs, not rendered Excel/OS theme overrides.
@@ -65,11 +102,11 @@ def check_contrast(src=SRC):
     palette = (src / 'M01_Ayarlar.bas').read_text(encoding='ascii')
     colors = {name: tuple(map(int, (r, g, b))) for name, r, g, b in re.findall(
         r'Case (\w+):\s*Palet = RGB\((\d+),\s*(\d+),\s*(\d+)\)', palette)}
-    pairs = [('prMetin', 'prZemin'), ('prIkincilMetin', 'prYuzey'),
-             ('prOk', 'prOkZemin'), ('prDikkat', 'prDikkatZemin'),
-             ('prEngel', 'prEngelZemin'), ('prOneriMetin', 'prOneriZemin'),
-             ('prZemin', 'prButonAna'), ('prZemin', 'prButonYesil'),
-             ('prZemin', 'prButonKirmizi'), ('prSeritYazi', 'prSeritZemin')]
+    for _ in range(3):   # role aliases: Case prX: Palet = Palet(prY)
+        for name, target in re.findall(r'Case (\w+):\s*Palet = Palet\((\w+)\)', palette):
+            if target in colors:
+                colors[name] = colors[target]
+    pairs = [(fg, bg) for fg, bg in CONTRAST_PAIRS]
     def luminance(rgb):
         linear = [v / 255 / 12.92 if v / 255 <= .04045 else ((v / 255 + .055) / 1.055) ** 2.4 for v in rgb]
         return sum(v * weight for v, weight in zip(linear, (.2126, .7152, .0722)))

@@ -18,7 +18,7 @@ Option Explicit
 '   Yardim           : Kilavuz'u acar
 ' ============================================================
 
-Private Const AYAR_SAYISI As Long = 11
+Private Const AYAR_SAYISI As Long = 14     ' v1.1: + anahtar, kirilim, donem sonu
 
 ' Panelden okunan bir blogun tum icerigi (yeniden cizim / gecis icin)
 Private Type BlokIcerik
@@ -87,6 +87,7 @@ Public Sub SifirdanKur()
     GecmisSayfasiHazirla
     ProfilSayfasiHazirla
     SetSayfasiHazirla
+    AyarlarSayfasiHazirla
 
     ' --- v33 analiz sayfalari ve adlari ---
     If eskiler.Count > 0 Then
@@ -113,6 +114,9 @@ Public Sub SifirdanKur()
     On Error GoTo Hata
 
     DenetimSessiz
+    On Error Resume Next
+    AnalizSayfasiHazirla
+    On Error GoTo Hata
     KorumalariUygula
     SekmeleriDuzenle
     EkranAc
@@ -126,13 +130,13 @@ Public Sub SifirdanKur()
             IIf(kilavuzTamam, "kuruldu", "KURULAMADI") & ", Gelistirici: " & _
             IIf(gelistiriciTamam, "guncellendi", "GUNCELLENEMEDI"), ""
 
-    MsgBox "KURULUM TAMAMLANDI  (" & SURUM & ")" & vbNewLine & vbNewLine & _
+    Bildir BS_OK, "Sifirdan Kur", "KURULUM TAMAMLANDI  (" & SURUM & ")" & vbNewLine & vbNewLine & _
            sonuc & _
            "Rapor, Gecmis, Profiller, Setler : hazir" & vbNewLine & _
            "Kilavuz      : " & IIf(kilavuzTamam, "kuruldu", "KURULAMADI") & vbNewLine & _
            "Gelistirici  : " & IIf(gelistiriciTamam, "guncellendi", "GUNCELLENEMEDI") & vbNewLine & vbNewLine & _
            "SIRADAKI ADIM: kaynak ve ana dosyalari ac, YENILE'ye bas," & vbNewLine & _
-           "sonra bu dosyayi kaydet.", vbInformation, "Sifirdan Kur"
+           "sonra bu dosyayi kaydet."
     Exit Sub
 
 Hata:
@@ -169,14 +173,14 @@ Public Sub PaneliYenidenKur()
     EkranAc
     PaneleGit 1
     OlayYaz "KURULUM", 0, 0, 0, "PaneliYenidenKur: " & sonuc, ""
-    MsgBox "Panel yeniden cizildi." & vbNewLine & vbNewLine & sonuc & vbNewLine & vbNewLine & _
-           "Dosyalari acip YENILE'ye bas.", vbInformation, "Paneli Yeniden Kur"
+    Bildir BS_OK, "Paneli Yeniden Kur", "Panel yeniden cizildi." & vbNewLine & vbNewLine & sonuc & vbNewLine & vbNewLine & _
+           "Dosyalari acip YENILE'ye bas."
     Exit Sub
 
 Hata:
     EkranAc True
-    MsgBox "PANEL YENIDEN KURULAMADI" & vbNewLine & vbNewLine & _
-           "Hata : " & Err.Number & " - " & Err.Description, vbCritical, "Paneli Yeniden Kur"
+    Bildir BS_ENGEL, "Paneli Yeniden Kur", "PANEL YENIDEN KURULAMADI" & vbNewLine & vbNewLine & _
+           "Hata : " & Err.Number & " - " & Err.Description
 
 End Sub
 
@@ -215,20 +219,20 @@ Public Sub PanelKur()
     PaneleGit 1
     OlayYaz "KURULUM", 0, 0, 0, "Panel sayfasi bos olarak kuruldu (PanelKur, " & SURUM & ")", ""
 
-    MsgBox "Panel kuruldu." & vbNewLine & vbNewLine & _
+    Bildir BS_OK, "Panel Kur", "Panel kuruldu." & vbNewLine & vbNewLine & _
            "AKIS:" & vbNewLine & _
            "1. Kaynak ve ana dosyalari ac (Enable Editing)." & vbNewLine & _
            "2. Panelde dosya/sayfa sec, YENILE'ye bas." & vbNewLine & _
            "3. Otomatik Eslestir, onerileri onayla, On Kontrol." & vbNewLine & _
            "4. Aktaracagin panellerde 'Bu paneli aktar' = Evet." & vbNewLine & _
            "5. AKTAR." & vbNewLine & vbNewLine & _
-           "Ayrintili anlatim: KILAVUZ.", vbInformation, "Panel Kur"
+           "Ayrintili anlatim: KILAVUZ."
     Exit Sub
 
 Hata:
     EkranAc True
-    MsgBox "PANEL KURULAMADI" & vbNewLine & vbNewLine & _
-           "Hata : " & Err.Number & " - " & Err.Description, vbCritical, "Panel Kur"
+    Bildir BS_ENGEL, "Panel Kur", "PANEL KURULAMADI" & vbNewLine & vbNewLine & _
+           "Hata : " & Err.Number & " - " & Err.Description
 
 End Sub
 
@@ -244,7 +248,7 @@ Private Function PaneliYenidenKurIc() As String
     Dim pnl As Worksheet
     Dim bloklar() As BlokIcerik
     Dim adet As Long, k As Long, gorunur As Long, tasinan As Long
-    Dim v33 As Boolean, v34 As Boolean
+    Dim v33 As Boolean, v34 As Boolean, v10 As Boolean
 
     If Not SayfaVarMi(SAYFA_PANEL) Then
         Set pnl = PanelHazirla()
@@ -258,12 +262,15 @@ Private Function PaneliYenidenKurIc() As String
 
     Set pnl = PanelHazirla()
     v34 = (KayitliDuzen() = "v34")
-    v33 = Not PanelDuzeniGuncel() And Not v34 And V33DuzeniMi(pnl)
+    ' v1.0 (ve onceki adi v35): tablo, ayar ve sabit ofsetleri v1.1 ile ayni;
+    ' v1.1 yalnizca 22-24. satirlara uc ayar ve karneye K9-K14 ekler.
+    v10 = (KayitliDuzen() = DUZEN_V10 Or KayitliDuzen() = "v35")
+    v33 = Not PanelDuzeniGuncel() And Not v34 And Not v10 And V33DuzeniMi(pnl)
 
     ' --- 1. OKU (hicbir sey silinmeden once) ---
     If v33 Then
         adet = V33BlokSayisi(pnl)
-    ElseIf PanelDuzeniGuncel() Or v34 Then
+    ElseIf PanelDuzeniGuncel() Or v34 Or v10 Then
         adet = BlokSayisi(pnl)
     Else
         adet = 0
@@ -272,7 +279,7 @@ Private Function PaneliYenidenKurIc() As String
     If adet > 0 Then
         ReDim bloklar(1 To adet)
         For k = 1 To adet
-            bloklar(k) = BlokOku(pnl, k, v33, v34)
+            bloklar(k) = BlokOku(pnl, k, v33, v34, v10)
             If bloklar(k).Var And Not bloklar(k).Gizli Then
                 gorunur = gorunur + 1
                 If k > MAX_BLOK Then
@@ -309,7 +316,9 @@ Private Function PaneliYenidenKurIc() As String
     FazlaListeleriSil
     PanelGorunumu pnl
 
-    If v33 Then
+    If v10 Then
+        PaneliYenidenKurIc = "v1.0 duzeninden tasindi (" & tasinan & " panel; icerik korundu, K9-K14 ve yeni ayar satirlari eklendi)"
+    ElseIf v33 Then
         PaneliYenidenKurIc = "v33 duzeninden tasindi (" & tasinan & " panel; ayarlar, sabit degerler ve eslestirmeler korundu)"
     ElseIf v34 Then
         PaneliYenidenKurIc = "v34 duzeninden tasindi (" & tasinan & " panel; FILTRE/ISLEM sola, HEDEF HARITASI saga alindi; icerik korundu)"
@@ -428,7 +437,7 @@ End Function
 
 ' Bir blogun butun icerigini okur (v33 ya da v34 yerlesimi)
 Private Function BlokOku(ByVal pnl As Worksheet, ByVal k As Long, ByVal v33 As Boolean, _
-                         ByVal v34 As Boolean) As BlokIcerik
+                         ByVal v34 As Boolean, ByVal v10 As Boolean) As BlokIcerik
 
     Dim b As BlokIcerik
     Dim c As Long, i As Long, son As Long, n As Long
@@ -446,9 +455,10 @@ Private Function BlokOku(ByVal pnl As Worksheet, ByVal k As Long, ByVal v33 As B
         oDeger = 1
         oSabitS = V33_SABIT_SUTUN_OFS
         oSabitD = V33_SABIT_DEGER_OFS
+        ' v33'un 22-24. satirlari hasar/ihbar/tutardir: yeni ayar sanilmaz (0)
         satirlar = Array(SATIR_DAHIL, SATIR_KAYNAK_DOSYA, SATIR_KAYNAK_SAYFA, SATIR_SON_SATIR, _
                          SATIR_HEDEF_DOSYA, SATIR_HEDEF_SAYFA, SATIR_YAZIM, SATIR_PROFIL, _
-                         V33_SATIR_TUTAR, V33_SATIR_HASAR, V33_SATIR_IHBAR)
+                         V33_SATIR_TUTAR, V33_SATIR_HASAR, V33_SATIR_IHBAR, 0, 0, 0)
     Else
         c = BlokSutun(k)
         oKaynak = OFS_KAYNAK
@@ -459,6 +469,13 @@ Private Function BlokOku(ByVal pnl As Worksheet, ByVal k As Long, ByVal v33 As B
         oSabitS = OFS_SABIT_SUTUN
         oSabitD = OFS_SABIT_DEGER
         satirlar = AyarSatirlari()
+        If v34 Or v10 Then
+            ' v34 / v1.0'da 22-24. satirlarin ayar sutunu bostur; yine de
+            ' yanlislikla yazilmis bir sey yeni ayar sanilmasin
+            satirlar(11) = 0
+            satirlar(12) = 0
+            satirlar(13) = 0
+        End If
     End If
 
     b.Var = (Left$(BH(Trim$(GuvenliMetin(pnl.Cells(SATIR_BLOK_BASLIK, c).Value))), 5) = "PANEL")
@@ -469,7 +486,7 @@ Private Function BlokOku(ByVal pnl As Worksheet, ByVal k As Long, ByVal v33 As B
     End If
 
     For i = 1 To AYAR_SAYISI
-        b.Ayarlar(i) = pnl.Cells(satirlar(i - 1), c + oDeger).Value
+        If satirlar(i - 1) > 0 Then b.Ayarlar(i) = pnl.Cells(satirlar(i - 1), c + oDeger).Value
     Next i
 
     ' --- Sabit degerler ---
@@ -533,7 +550,7 @@ End Function
 Private Function AyarSatirlari() As Variant
     AyarSatirlari = Array(SATIR_DAHIL, SATIR_KAYNAK_DOSYA, SATIR_KAYNAK_SAYFA, SATIR_SON_SATIR, _
                           SATIR_HEDEF_DOSYA, SATIR_HEDEF_SAYFA, SATIR_YAZIM, SATIR_PROFIL, _
-                          SATIR_TUTAR, SATIR_HASAR, SATIR_IHBAR)
+                          SATIR_TUTAR, SATIR_HASAR, SATIR_IHBAR, SATIR_ANAHTAR, SATIR_KIRILIM, SATIR_DONEM)
 End Function
 
 
@@ -558,7 +575,7 @@ Private Sub BlokYaz(ByVal pnl As Worksheet, ByVal k As Long, ByRef b As BlokIcer
                 End If
             Case SATIR_YAZIM
                 Ayar(pnl, k, r).Value = YazimMetni(YazimModuOku(b.Ayarlar(i)))
-            Case SATIR_SON_SATIR
+            Case SATIR_SON_SATIR, SATIR_DONEM
                 If Trim$(GuvenliMetin(b.Ayarlar(i))) <> "" Then Ayar(pnl, k, r).Value = b.Ayarlar(i)
             Case Else
                 If VarType(b.Ayarlar(i)) = vbString Then
@@ -711,9 +728,11 @@ Public Sub SekmeleriDuzenle()
     On Error Resume Next
     Set eskiSayfa = ActiveSheet
 
-    sira = Array(SAYFA_PANEL, SAYFA_DENETIM, SAYFA_RAPOR, SAYFA_GECMIS, SAYFA_PROFIL, SAYFA_SET, KilavuzAdi(), SAYFA_GELISTIRICI)
-    renk = Array(Palet(prMarka), Palet(prMarka), Palet(prIkincilMetin), Palet(prIkincilMetin), Palet(prIkincilMetin), _
-                 Palet(prOneriMetin), Palet(prIkincilMetin), Palet(prIkincilMetin))
+    ' SY-03: Panel, Analiz, Denetim | Rapor, Gecmis | Profiller, Setler, Ayarlar | Kilavuz
+    sira = Array(SAYFA_PANEL, SAYFA_ANALIZ, SAYFA_DENETIM, SAYFA_RAPOR, SAYFA_GECMIS, SAYFA_PROFIL, SAYFA_SET, _
+                 SAYFA_AYARLAR, KilavuzAdi(), SAYFA_GELISTIRICI)
+    renk = Array(Palet(prMarka), Palet(prMarka), Palet(prMarka), Palet(prIkincilMetin), Palet(prIkincilMetin), _
+                 Palet(prPasifMetin), Palet(prPasifMetin), Palet(prPasifMetin), Palet(prIkincilMetin), Palet(prIkincilMetin))
 
     konum = 0
     For i = 0 To UBound(sira)
@@ -730,6 +749,8 @@ Public Sub SekmeleriDuzenle()
         If SayfaVarMi(SAYFA_LISTE_ONEK & i) Then ThisWorkbook.Worksheets(SAYFA_LISTE_ONEK & i).Visible = xlSheetVeryHidden
     Next i
     If SayfaVarMi(SAYFA_YEDEK) Then ThisWorkbook.Worksheets(SAYFA_YEDEK).Visible = xlSheetVeryHidden
+    If SayfaVarMi(SAYFA_BELLEK) Then ThisWorkbook.Worksheets(SAYFA_BELLEK).Visible = xlSheetVeryHidden
+    If SayfaVarMi(SAYFA_SABLON) Then ThisWorkbook.Worksheets(SAYFA_SABLON).Visible = xlSheetVeryHidden
 
     If SayfaVarMi(SAYFA_GELISTIRICI) Then ThisWorkbook.Worksheets(SAYFA_GELISTIRICI).Visible = xlSheetVeryHidden
     If Not eskiSayfa Is Nothing Then
@@ -745,6 +766,23 @@ End Sub
 ' ============================================================
 Public Sub Yardim()
     KilavuzAc
+End Sub
+
+
+' UX-03 klavye kisayollari: Ctrl+Shift+1 Yenile, 2 Eslestir, 3 On Kontrol, 4 AKTAR
+Public Sub KisayollariKur(ByVal ac As Boolean)
+    Dim i As Long
+    Dim makrolar As Variant
+    makrolar = Array("Yenile", "OtomatikEslestir", "OnKontrol", "Aktar")
+    On Error Resume Next
+    For i = 0 To UBound(makrolar)
+        If ac Then
+            Application.OnKey "^+" & (i + 1), "'" & ThisWorkbook.Name & "'!" & CStr(makrolar(i))
+        Else
+            Application.OnKey "^+" & (i + 1)
+        End If
+    Next i
+    On Error GoTo 0
 End Sub
 
 
@@ -798,6 +836,6 @@ Public Sub Tani()
         metin = metin & vbNewLine & "SON DOSYA ACMA HATASI:" & vbNewLine & g_SonAcmaHatasi
     End If
 
-    MsgBox Sigdir(metin, MSG_SINIR), vbInformation, "Tani"
+    Bildir BS_BILGI, "Tani", Sigdir(metin, MSG_SINIR)
 
 End Sub
