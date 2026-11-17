@@ -1,4 +1,15 @@
-# Aktarım Paneli v1.0
+# Aktarım Paneli
+
+> **v1.1 development draft — not a completed enterprise release.**
+> Portable source gates pass; Excel compilation, E2E, migration and performance
+> have not been executed in this Linux environment. The published downloads and
+> screenshots below remain v1.0. See [implementation status](plan/V1.1_SONUC.md)
+> for completed changes and the outstanding K9–K14/Analiz scope.
+>
+> New source: explicit number parsing, CRC32 undo fingerprints with legacy
+> compatibility, semantic palette, compact ribbon, numeric audit KPIs, monthly
+> chart, and accidental-edit protection restored on workbook open.
+
 
 **Column-mapped, audited data transfer for actuarial closing in Excel.**
 
@@ -196,7 +207,7 @@ It removes the old v33 analytics sheets and names, and rebuilds Kılavuz, Geliş
 and Denetim.
 
 **Manual install, without Python:** open the macro-free `.xlsx` and save it as `.xlsm`.
-Then import `Sozluk.cls` and `M01…M10.bas`, and paste the Panel and ThisWorkbook code
+Then import `Sozluk.cls` and every `.bas` file in `src/`, and paste the Panel and ThisWorkbook code
 (`KURULUM.txt` in the zip). Run *Debug › Compile*, then `Alt+F8 › SifirdanKur`.
 
 Requirements for the tools: Windows, Excel, Python 3.10+ with `pywin32`, and *Trust
@@ -240,7 +251,9 @@ docs/                      GitHub Pages download page and screenshots
 ## Developer workflow and CLI
 
 ```bash
-python tools/build.py --check                         # ASCII gate only
+python tools/build.py --check                         # portable source + contrast gates
+python -m unittest discover -s tools -p test_source_checks.py
+python tools/test_enterprise.py --panel dist/AktarimPaneli_v1.1-dev.xlsm  # Windows/Excel
 python tools/build.py --new dist/AktarimPaneli_v1.0.xlsm
 python tools/build.py --upgrade in.xlsm --out out.xlsm [--no-setup] [--visible] [--src DIR]
 python tools/test_e2e.py [--panel x.xlsm] [--v33 v33.xlsm] [--only-migration]
@@ -314,6 +327,7 @@ in the hot loops (about 5 million calls fewer per run).
 
 | Version | Highlights |
 |---|---|
+| v1.1-dev | Incomplete development draft; see plan/V1.1_SONUC.md. No v1.1 workbook has been released. |
 | v33 | Monolithic Module1/2/3 with an analytics add-on |
 | v34 | Modular `src/`, build/test tooling, format guard, fingerprinted undo, patch mode, filters, ~9× faster Yenile |
 | v1.0 | K1–K8 control points with live scorecard and tagged audit rows; Denetim sheet; HAZIRLIK; batch reconciliation; amount, green-cell and fixed-value checks; editable columns grouped with the map moved right; card layout; double-click shortcuts; auto-detected control columns; v33/v34/v35 → v1.0 migration; supersedes the release first published as v35 |
