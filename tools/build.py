@@ -76,6 +76,8 @@ def main(argv=None) -> int:
     problems = check_ascii(src_dir) if args.historical_source else check_sources(src_dir)
     if not problems and not args.historical_source:
         problems.extend(check_contrast(src_dir))
+        from vba_lint import lint  # portable static compile checks
+        problems.extend(lint(src_dir))
     if problems:
         print("SOURCE CHECK FAILED:")
         print("\n".join(problems))
